@@ -1,11 +1,11 @@
 # VRCAvatarActions
 Unity script for creating avatar 3.0 content faster and easier.
 
-# QUICK START
+## QUICK START
 
-- To begin, create an action set with right clicking in the Unity higherarchy window and select "Create/Tropical/AvatarActions"
+- Begin by right clicking in the Assets higherarchy and selecting "Create/Tropical/AvatarActions"
 - Select the new item called "AvatarActions"
-- In the inspector, toggle on "Root Menu". (NOTE: Only enable "Root Menu" on the top most AvatarActions object.)
+- In the inspector, toggle on "Root Menu". **(Only enable this on the top most AvatarActions object)**
 - Click "Add", then select the "New Action"
 - Define this action as you like, most of these are self explainitory
     - **Name** - Display name in expressions menu
@@ -25,7 +25,8 @@ Unity script for creating avatar 3.0 content faster and easier.
       - Exit - An optional animtion to play when exiting.
     - **IK Overrides** - Informs the avatar to disable certain IK controls over the avatar while the control is active.
 		
-# BUILDING
+## BUILDING
 
 Click the "Build Avatar Data" button in the root action set.
+
 Now you are ready to upload your avatar!
