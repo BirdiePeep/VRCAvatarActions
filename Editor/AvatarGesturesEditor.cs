@@ -6,70 +6,73 @@ using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionPar
 using System;
 using UnityEngineInternal;
 
-[CustomEditor(typeof(AvatarGestures))]
-public class AvatarGestureEditor : AvatarActionsEditor
+namespace VRCAvatarActions
 {
-	public override void Inspector_Header()
-	{
-        //Default Action
-        EditorGUILayout.BeginVertical(GUI.skin.box);
+    [CustomEditor(typeof(AvatarGestures))]
+    public class AvatarGestureEditor : AvatarActionsEditor
+    {
+        public override void Inspector_Header()
         {
-            var action = (target as AvatarGestures).defaultAction;
+            //Default Action
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            {
+                var action = (target as AvatarGestures).defaultAction;
 
-            EditorGUILayout.LabelField("Default Gesture");
+                EditorGUILayout.LabelField("Default Gesture");
+                EditorGUI.indentLevel += 1;
+                action.actionLayerAnimations.enter = (UnityEngine.AnimationClip)EditorGUILayout.ObjectField("Action Layer", action.actionLayerAnimations.enter, typeof(UnityEngine.AnimationClip), false);
+                action.fxLayerAnimations.enter = (UnityEngine.AnimationClip)EditorGUILayout.ObjectField("Fx Layer", action.fxLayerAnimations.enter, typeof(UnityEngine.AnimationClip), false);
+                EditorGUI.indentLevel -= 1;
+                action.fadeIn = EditorGUILayout.FloatField("Transition In", action.fadeIn);
+            }
+            EditorGUILayout.EndVertical();
+        }
+        public override void Inspector_Action(AvatarActions.Action action)
+        {
+            //Name
+            action.name = EditorGUILayout.TextField("Name", action.name);
+
+            //Gesture
+            EditorGUILayout.BeginVertical(GUI.skin.box);
             EditorGUI.indentLevel += 1;
+            {
+                EditorGUILayout.LabelField("Gesture Type");
+                //DrawGestureToggle("Neutral", AvatarActionSet.Action.GestureEnum.Neutral);
+                DrawGestureToggle("Fist", AvatarActions.Action.GestureEnum.Fist);
+                DrawGestureToggle("Open Hand", AvatarActions.Action.GestureEnum.OpenHand);
+                DrawGestureToggle("Finger Point", AvatarActions.Action.GestureEnum.FingerPoint);
+                DrawGestureToggle("Victory", AvatarActions.Action.GestureEnum.Victory);
+                DrawGestureToggle("Rock N Roll", AvatarActions.Action.GestureEnum.RockNRoll);
+                DrawGestureToggle("Hand Gun", AvatarActions.Action.GestureEnum.HandGun);
+                DrawGestureToggle("Thumbs Up", AvatarActions.Action.GestureEnum.ThumbsUp);
+
+                void DrawGestureToggle(string name, AvatarActions.Action.GestureEnum type)
+                {
+                    var value = action.gestureType.GetValue(type);
+                    EditorGUI.BeginDisabledGroup(!value && !CheckGestureTypeUsed(type));
+                    action.gestureType.SetValue(type, EditorGUILayout.Toggle(name, value));
+                    EditorGUI.EndDisabledGroup();
+                }
+            }
+            EditorGUI.indentLevel -= 1;
+            EditorGUILayout.EndVertical();
+
+            //Animation
             action.actionLayerAnimations.enter = (UnityEngine.AnimationClip)EditorGUILayout.ObjectField("Action Layer", action.actionLayerAnimations.enter, typeof(UnityEngine.AnimationClip), false);
             action.fxLayerAnimations.enter = (UnityEngine.AnimationClip)EditorGUILayout.ObjectField("Fx Layer", action.fxLayerAnimations.enter, typeof(UnityEngine.AnimationClip), false);
-            EditorGUI.indentLevel -= 1;
             action.fadeIn = EditorGUILayout.FloatField("Transition In", action.fadeIn);
+
+            //Default
+            //DrawInspector_Action(action, false);
         }
-        EditorGUILayout.EndVertical();
-	}
-    public override void Inspector_Action(AvatarActions.Action action)
-    {
-        //Name
-        action.name = EditorGUILayout.TextField("Name", action.name);
-
-        //Gesture
-        EditorGUILayout.BeginVertical(GUI.skin.box);
-        EditorGUI.indentLevel += 1;
+        bool CheckGestureTypeUsed(AvatarActions.Action.GestureEnum type)
         {
-            EditorGUILayout.LabelField("Gesture Type");
-            //DrawGestureToggle("Neutral", AvatarActionSet.Action.GestureEnum.Neutral);
-            DrawGestureToggle("Fist", AvatarActions.Action.GestureEnum.Fist);
-            DrawGestureToggle("Open Hand", AvatarActions.Action.GestureEnum.OpenHand);
-            DrawGestureToggle("Finger Point", AvatarActions.Action.GestureEnum.FingerPoint);
-            DrawGestureToggle("Victory", AvatarActions.Action.GestureEnum.Victory);
-            DrawGestureToggle("Rock N Roll", AvatarActions.Action.GestureEnum.RockNRoll);
-            DrawGestureToggle("Hand Gun", AvatarActions.Action.GestureEnum.HandGun);
-            DrawGestureToggle("Thumbs Up", AvatarActions.Action.GestureEnum.ThumbsUp);
-
-            void DrawGestureToggle(string name, AvatarActions.Action.GestureEnum type)
+            foreach (var action in script.actions)
             {
-                var value = action.gestureType.GetValue(type);
-                EditorGUI.BeginDisabledGroup(!value && !CheckGestureTypeUsed(type));
-                action.gestureType.SetValue(type, EditorGUILayout.Toggle(name, value));
-                EditorGUI.EndDisabledGroup();
+                if (action.gestureType.GetValue(type))
+                    return false;
             }
+            return true;
         }
-        EditorGUI.indentLevel -= 1;
-        EditorGUILayout.EndVertical();
-
-        //Animation
-        action.actionLayerAnimations.enter = (UnityEngine.AnimationClip)EditorGUILayout.ObjectField("Action Layer", action.actionLayerAnimations.enter, typeof(UnityEngine.AnimationClip), false);
-        action.fxLayerAnimations.enter = (UnityEngine.AnimationClip)EditorGUILayout.ObjectField("Fx Layer", action.fxLayerAnimations.enter, typeof(UnityEngine.AnimationClip), false);
-        action.fadeIn = EditorGUILayout.FloatField("Transition In", action.fadeIn);
-
-        //Default
-        //DrawInspector_Action(action, false);
-    }
-    bool CheckGestureTypeUsed(AvatarActions.Action.GestureEnum type)
-    {
-        foreach(var action in script.actions)
-        {
-            if (action.gestureType.GetValue(type))
-                return false;
-        }
-        return true;
     }
 }

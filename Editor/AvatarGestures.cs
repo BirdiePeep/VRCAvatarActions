@@ -2,16 +2,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "AvatarGestures", menuName = "Tropical/AvatarGestures")]
-public class AvatarGestures : AvatarActions
+namespace VRCAvatarActions
 {
-	public Action defaultAction;
-
-	public AvatarGestures()
+	[CreateAssetMenu(fileName = "AvatarGestures", menuName = "Tropical/AvatarGestures")]
+	public class AvatarGestures : AvatarActions
 	{
-		var action = new Action();
-		action.name = "Default";
-		action.gestureType.neutral = true;
-		defaultAction = action;
+		public Action defaultAction;
+
+		public AvatarGestures()
+		{
+			var action = new Action();
+			action.name = "Default";
+			action.gestureType.neutral = true;
+			defaultAction = action;
+		}
 	}
 }
