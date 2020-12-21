@@ -3,7 +3,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 
 ## QUICK START
 
-- Begin by right clicking in the Assets higherarchy and selecting "Create/VRCActions/Actions Descriptor".
+- Begin by right clicking in the Assets higherarchy and selecting "Create/VRCAvatarActions/Actions Descriptor".
 - Select the new item called "Actions Descriptor".
 - In the inspector click "Add" next to the Menu Actions field.
 - Select the new item called "Menu Main".
