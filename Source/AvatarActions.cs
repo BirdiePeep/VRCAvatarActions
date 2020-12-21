@@ -1,16 +1,15 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
-using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
-using TrackingType = VRC.SDKBase.VRC_AnimatorTrackingControl.TrackingType;
+using VRC.SDK3.Avatars.Components;
 
+#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
-    [CreateAssetMenu(fileName = "Actions Descriptor", menuName = "VRCAvatarActions/Actions Descriptor")]
-    public class ActionsDescriptor : ScriptableObject
+    [RequireComponent(typeof(VRCAvatarDescriptor))]
+    public class AvatarActions : MonoBehaviour
     {
         //Descriptor Data
         public MenuActions menuActions;
@@ -27,20 +26,16 @@ namespace VRCAvatarActions
         public bool foldoutIgnoreParameters = false;
     }
 
-    [CustomEditor(typeof(ActionsDescriptor))]
-    public class ActionsDescriptorEditor : EditorBase
+    [CustomEditor(typeof(AvatarActions))]
+    public class AvatarActionsEditor : Editor
     {
-        enum NonMenuTypes
-        {
-            New,
-            Idle,
-            SimpleGestures,
-        }
+        AvatarActions script;
+        VRCAvatarDescriptor avatarDescriptor; 
 
-        public ActionsDescriptor script;
-        public override void Inspector_Body()
+        public override void OnInspectorGUI()
         {
-            script = target as ActionsDescriptor;
+            script = target as AvatarActions;
+            avatarDescriptor = script.gameObject.GetComponent<VRCAvatarDescriptor>();
 
             //Menu Actions
             EditorGUILayout.BeginVertical(GUI.skin.box);
@@ -49,17 +44,17 @@ namespace VRCAvatarActions
                 EditorGUILayout.BeginHorizontal();
                 script.menuActions = (MenuActions)EditorGUILayout.ObjectField("Menu Actions", script.menuActions, typeof(MenuActions), false);
 
-                EditorGUI.BeginDisabledGroup(script.menuActions != null);
+                /*EditorGUI.BeginDisabledGroup(script.menuActions != null);
                 if(GUILayout.Button("New", GUILayout.Width(SmallButtonSize)))
                 {
-                    var actions = new MenuActions();
+                    var actions = ScriptableObject.CreateInstance<MenuActions>();
                     actions.name = "Menu Main";
-                    if(AvatarActions.SaveAsset(actions, script, checkIfExists:true))
+                    if(AvatarActions.SaveAsset(actions, script.gameObject, checkIfExists:true))
                     {
                         script.menuActions = actions;
                     }
                 }
-                EditorGUI.EndDisabledGroup();
+                EditorGUI.EndDisabledGroup();*/
 
                 EditorGUILayout.EndHorizontal();
             }
@@ -80,21 +75,6 @@ namespace VRCAvatarActions
                         //Reference
                         script.otherActions[i] = (NonMenuActions)EditorGUILayout.ObjectField("Actions", script.otherActions[i], typeof(NonMenuActions), false);
 
-                        //Add
-                        /*EditorGUI.BeginDisabledGroup(script.nonMenuActions[i] != null);
-                        if(GUILayout.Button("New", GUILayout.Width(SmallButtonSize)))
-                        {
-                            
-
-                            var actions = new IdleActions();
-                            actions.name = "Idle Actions";
-                            if(AvatarActions.SaveAsset(actions, script, checkIfExists: true))
-                            {
-                                script.nonMenuActions[i] = actions;
-                            }
-                        }
-                        EditorGUI.EndDisabledGroup();*/
-
                         //Delete
                         if (GUILayout.Button("X", GUILayout.Width(32)))
                         {
@@ -108,12 +88,12 @@ namespace VRCAvatarActions
             EditorGUI.indentLevel -= 1;
             EditorGUILayout.EndVertical();
 
-            Divider();
+            EditorBase.Divider();
 
             //Build
-            if (GUILayout.Button("Build Avatar Data"))
+            if (GUILayout.Button("Build Avatar Data", GUILayout.Height(32)))
             {
-                AvatarActions.BuildAvatarData(avatarDescriptor, script);
+                BaseActions.BuildAvatarData(avatarDescriptor, script);
             }
 
             //Build Options
@@ -130,7 +110,7 @@ namespace VRCAvatarActions
                     void DrawStringList(ref bool foldout, string title, List<string> list)
                     {
                         EditorGUI.indentLevel += 1;
-                        foldout = EditorGUILayout.Foldout(foldout, AvatarActionsEditor.Title(title, list.Count > 0));
+                        foldout = EditorGUILayout.Foldout(foldout, BaseActionsEditor.Title(title, list.Count > 0));
                         if (foldout)
                         {
                             //Add
@@ -168,7 +148,7 @@ namespace VRCAvatarActions
             script.foldoutBuildData = EditorGUILayout.Foldout(script.foldoutBuildData, "Built Data");
             if (script.foldoutBuildData)
             {
-                void AnimationController(AvatarActions.BaseLayers index, string name)
+                void AnimationController(BaseActions.BaseLayers index, string name)
                 {
                     var layer = avatarDescriptor.baseAnimationLayers[(int)index];
                     var controller = layer.animatorController as UnityEditor.Animations.AnimatorController;
@@ -184,8 +164,8 @@ namespace VRCAvatarActions
 
                 EditorGUILayout.HelpBox("Objects built and linked on the avatar descriptor. Anything referenced here will be modified and possibly destroyed by the compiling process.", MessageType.Info);
 
-                AnimationController(AvatarActions.BaseLayers.Action, "Action Controller");
-                AnimationController(AvatarActions.BaseLayers.FX, "FX Controller");
+                AnimationController(BaseActions.BaseLayers.Action, "Action Controller");
+                AnimationController(BaseActions.BaseLayers.FX, "FX Controller");
                 avatarDescriptor.expressionsMenu = (ExpressionsMenu)EditorGUILayout.ObjectField("Expressions Menu", avatarDescriptor.expressionsMenu, typeof(ExpressionsMenu), false);
                 avatarDescriptor.expressionParameters = (ExpressionParameters)EditorGUILayout.ObjectField("Expression Parameters", avatarDescriptor.expressionParameters, typeof(ExpressionParameters), false);
             }
@@ -194,4 +174,4 @@ namespace VRCAvatarActions
         }
     }
 }
-    
+#endif

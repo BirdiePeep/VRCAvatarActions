@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
 
+#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
 	[CreateAssetMenu(fileName = "Simple Gestures", menuName = "VRCAvatarActions/Other Actions/Simple Gestures")]
@@ -190,7 +191,7 @@ namespace VRCAvatarActions
                 AddGestureCondition(GestureEnum.RockNRoll);
                 AddGestureCondition(GestureEnum.HandGun);
                 AddGestureCondition(GestureEnum.ThumbsUp);
-                void AddGestureCondition(AvatarActions.GestureEnum gesture)
+                void AddGestureCondition(BaseActions.GestureEnum gesture)
                 {
                     if (action.gestureTable.GetValue(gesture))
                     {
@@ -235,7 +236,7 @@ namespace VRCAvatarActions
     }
 
     [CustomEditor(typeof(SimpleGestureActions))]
-    public class SimpleGestureActionsEditor : AvatarActionsEditor
+    public class SimpleGestureActionsEditor : BaseActionsEditor
     {
         SimpleGestureActions gestureScript;
 
@@ -259,7 +260,7 @@ namespace VRCAvatarActions
             }
             EditorGUILayout.EndVertical();
         }
-        public override void Inspector_Action_Header(AvatarActions.Action action)
+        public override void Inspector_Action_Header(BaseActions.Action action)
         {
             var gestureAction = (SimpleGestureActions.GestureAction)action;
 
@@ -272,15 +273,15 @@ namespace VRCAvatarActions
             {
                 EditorGUILayout.LabelField("Gesture Type");
                 //DrawGestureToggle("Neutral", AvatarActionSet.Action.GestureEnum.Neutral);
-                DrawGestureToggle("Fist", AvatarActions.GestureEnum.Fist);
-                DrawGestureToggle("Open Hand", AvatarActions.GestureEnum.OpenHand);
-                DrawGestureToggle("Finger Point", AvatarActions.GestureEnum.FingerPoint);
-                DrawGestureToggle("Victory", AvatarActions.GestureEnum.Victory);
-                DrawGestureToggle("Rock N Roll", AvatarActions.GestureEnum.RockNRoll);
-                DrawGestureToggle("Hand Gun", AvatarActions.GestureEnum.HandGun);
-                DrawGestureToggle("Thumbs Up", AvatarActions.GestureEnum.ThumbsUp);
+                DrawGestureToggle("Fist", BaseActions.GestureEnum.Fist);
+                DrawGestureToggle("Open Hand", BaseActions.GestureEnum.OpenHand);
+                DrawGestureToggle("Finger Point", BaseActions.GestureEnum.FingerPoint);
+                DrawGestureToggle("Victory", BaseActions.GestureEnum.Victory);
+                DrawGestureToggle("Rock N Roll", BaseActions.GestureEnum.RockNRoll);
+                DrawGestureToggle("Hand Gun", BaseActions.GestureEnum.HandGun);
+                DrawGestureToggle("Thumbs Up", BaseActions.GestureEnum.ThumbsUp);
 
-                void DrawGestureToggle(string name, AvatarActions.GestureEnum type)
+                void DrawGestureToggle(string name, BaseActions.GestureEnum type)
                 {
                     var value = gestureAction.gestureTable.GetValue(type);
                     EditorGUI.BeginDisabledGroup(!value && !CheckGestureTypeUsed(type));
@@ -304,7 +305,7 @@ namespace VRCAvatarActions
             //Default
             //DrawInspector_Action(action, false);
         }
-        bool CheckGestureTypeUsed(AvatarActions.GestureEnum type)
+        bool CheckGestureTypeUsed(BaseActions.GestureEnum type)
         {
             foreach (var action in gestureScript.actions)
             {
@@ -315,3 +316,4 @@ namespace VRCAvatarActions
         }
     }
 }
+#endif

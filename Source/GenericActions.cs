@@ -6,6 +6,7 @@ using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
+#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
     [CreateAssetMenu(fileName = "Generic Actions", menuName = "VRCAvatarActions/Other Actions/Generic Actions")]
@@ -78,7 +79,7 @@ namespace VRCAvatarActions
     }
 
     [CustomEditor(typeof(GenericActions))]
-    public class GenericActionsEditor : AvatarActionsEditor
+    public class GenericActionsEditor : BaseActionsEditor
     {
         public override void Inspector_Header()
         {
@@ -86,4 +87,4 @@ namespace VRCAvatarActions
         }
     }
 }
-
+#endif

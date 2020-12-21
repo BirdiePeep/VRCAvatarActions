@@ -7,10 +7,11 @@ using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 using UnityEngine.Experimental.UIElements;
 
+#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
     [CreateAssetMenu(fileName = "Menu Actions", menuName = "VRCAvatarActions/Menu Actions/Menu Actions")]
-    public class MenuActions : AvatarActions
+    public class MenuActions : BaseActions
     {
         [System.Serializable]
         public class MenuAction : Action
@@ -525,7 +526,7 @@ namespace VRCAvatarActions
     }
 
     [CustomEditor(typeof(MenuActions))]
-    public class MenuActionsEditor : AvatarActionsEditor
+    public class MenuActionsEditor : BaseActionsEditor
     {
         MenuActions menuScript;
 
@@ -546,7 +547,7 @@ namespace VRCAvatarActions
 
             base.Inspector_Body();
         }
-        public override void Inspector_Action_Header(AvatarActions.Action action)
+        public override void Inspector_Action_Header(BaseActions.Action action)
         {
             //Base
             base.Inspector_Action_Header(action);
@@ -559,7 +560,7 @@ namespace VRCAvatarActions
             if (menuAction.menuType != MenuActions.MenuAction.MenuType.PreExisting)
                 menuAction.icon = (Texture2D)EditorGUILayout.ObjectField("Icon", menuAction.icon, typeof(Texture2D), false);
         }
-        public override void Inspector_Action_Body(AvatarActions.Action action, bool showParam = true)
+        public override void Inspector_Action_Body(BaseActions.Action action, bool showParam = true)
         {
             //Details
             var menuAction = (MenuActions.MenuAction)action;
@@ -626,7 +627,7 @@ namespace VRCAvatarActions
                 //Create
                 var subMenu = ScriptableObject.CreateInstance<MenuActions>();
                 subMenu.name = $"Menu {action.name}";
-                AvatarActions.SaveAsset(subMenu, script, null, true);
+                BaseActions.SaveAsset(subMenu, script, null, true);
 
                 //Set
                 action.subMenu = subMenu;
@@ -647,3 +648,4 @@ namespace VRCAvatarActions
         }
     }
 }
+#endif

@@ -5,6 +5,7 @@ using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
+#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
     public class EditorBase : Editor
@@ -221,11 +222,11 @@ namespace VRCAvatarActions
 		#endregion
 
 		#region Helper Methods
-		protected void Divider()
+		public static void Divider()
         {
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
         }
-        protected Texture2D MakeTex(int width, int height, Color col)
+        public static Texture2D MakeTex(int width, int height, Color col)
         {
             Color[] pix = new Color[width * height];
             for (int i = 0; i < pix.Length; ++i)
@@ -240,4 +241,4 @@ namespace VRCAvatarActions
 		#endregion
 	}
 }
-
+#endif
