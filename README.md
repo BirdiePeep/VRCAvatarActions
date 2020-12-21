@@ -3,16 +3,17 @@ Unity script for creating avatar 3.0 content faster and easier.
 
 ## QUICK START
 
-- Begin by right clicking in the Assets higherarchy and selecting "Create/Tropical/AvatarActions"
-- Select the new item called "AvatarActions"
-- In the inspector, toggle on "Root Menu". **(Only enable this on the top most AvatarActions object)**
-- Click "Add", then select the "New Action"
+- Begin by right clicking in the Assets higherarchy and selecting "Create/VRCActions/Actions Descriptor"
+- Select the new item called "Actions Descriptor"
+- In the inspector click "Add" next to the Menu Actions field.
+- Select the ned item called "Menu Main"
+- In the inspector click "Add" to create a new action.
 - Define this action as you like, most of these are self explainitory
     - **Name** - Display name in expressions menu
     - **Icon** - Display icon in expressions menu
     - **Type** - Type of action
-      - Button - Press and release.
       - Toggle - Toggle on/off
+      - Button - Press and release.
       - Slider - Radial slider, plays an animation at a normalized time based on the slider value.
       - Sub-Menu - Goes to another AvatarActions object.
       - Pre-Existing - If a menu item has the same name, it won't destroy it.
@@ -24,9 +25,11 @@ Unity script for creating avatar 3.0 content faster and easier.
       - Enter - The base animation, it plays at the start
       - Exit - An optional animtion to play when exiting.
     - **IK Overrides** - Informs the avatar to disable certain IK controls over the avatar while the control is active.
+    - **Triggers (Advanced)** - Additional enter or exit conditions for this action.
+    - **Sub-Actions (Experimental)** - Supply any number of non-menu action sets.  These actions will only activate if this control is also active.
 		
 ## BUILDING
 
-Click the "Build Avatar Data" button in the root action set.
+Click the "Build Avatar Data" button on the Actions Descriptor object.
 
 Now you are ready to upload your avatar!
