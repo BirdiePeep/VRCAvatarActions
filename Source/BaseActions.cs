@@ -464,7 +464,7 @@ namespace VRCAvatarActions
 
                 //Save
                 animation.name = this.name + "_Generated";
-                SaveAsset(animation, ActionsDescriptor, "Generated");
+                SaveAsset(animation, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
 
                 //Return
                 return animation;
@@ -533,7 +533,7 @@ namespace VRCAvatarActions
                 if (controller == null || descLayer.isDefault)
                 {
                     //Dir Path
-                    var dirPath = AssetDatabase.GetAssetPath(ActionsDescriptor);
+                    var dirPath = AssetDatabase.GetAssetPath(ActionsDescriptor.ReturnAnyScriptableObject());
                     dirPath = dirPath.Replace(Path.GetFileName(dirPath), $"Generated/");
                     System.IO.Directory.CreateDirectory(dirPath);
 
@@ -583,7 +583,7 @@ namespace VRCAvatarActions
 
             //Delete all generated animations
             {
-                var dirPath = AssetDatabase.GetAssetPath(ActionsDescriptor);
+                var dirPath = AssetDatabase.GetAssetPath(ActionsDescriptor.ReturnAnyScriptableObject());
                 dirPath = dirPath.Replace(Path.GetFileName(dirPath), $"Generated/");
                 var files = System.IO.Directory.GetFiles(dirPath);
                 foreach (var file in files)
@@ -1088,8 +1088,13 @@ namespace VRCAvatarActions
         {
             //Dir Path
             var dirPath = AssetDatabase.GetAssetPath(rootAsset);
-            if(!string.IsNullOrEmpty(dirPath))
-                dirPath = dirPath.Replace(Path.GetFileName(dirPath), "");
+            if(string.IsNullOrEmpty(dirPath))
+            {
+                BuildFailed = true;
+                EditorUtility.DisplayDialog("Build Error", "Unable to save asset, unknown asset path.", "Okay");
+                return false;
+            }
+            dirPath = dirPath.Replace(Path.GetFileName(dirPath), "");
             if (!string.IsNullOrEmpty(subDir))
                 dirPath += $"{subDir}/";
             System.IO.Directory.CreateDirectory(dirPath);

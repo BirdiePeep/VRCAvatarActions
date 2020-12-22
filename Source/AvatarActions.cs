@@ -24,6 +24,19 @@ namespace VRCAvatarActions
         public bool foldoutBuildOptions = false;
         public bool foldoutIgnoreLayers = false;
         public bool foldoutIgnoreParameters = false;
+
+        //Helper
+        public UnityEngine.Object ReturnAnyScriptableObject()
+        {
+            if (menuActions != null)
+                return menuActions;
+            foreach(var action in otherActions)
+            {
+                if (action != null)
+                    return action;
+            }
+            return null;
+        }
     }
 
     [CustomEditor(typeof(AvatarActions))]
@@ -43,19 +56,6 @@ namespace VRCAvatarActions
             {
                 EditorGUILayout.BeginHorizontal();
                 script.menuActions = (MenuActions)EditorGUILayout.ObjectField("Menu Actions", script.menuActions, typeof(MenuActions), false);
-
-                /*EditorGUI.BeginDisabledGroup(script.menuActions != null);
-                if(GUILayout.Button("New", GUILayout.Width(SmallButtonSize)))
-                {
-                    var actions = ScriptableObject.CreateInstance<MenuActions>();
-                    actions.name = "Menu Main";
-                    if(AvatarActions.SaveAsset(actions, script.gameObject, checkIfExists:true))
-                    {
-                        script.menuActions = actions;
-                    }
-                }
-                EditorGUI.EndDisabledGroup();*/
-
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUI.indentLevel -= 1;
@@ -91,10 +91,12 @@ namespace VRCAvatarActions
             EditorBase.Divider();
 
             //Build
+            EditorGUI.BeginDisabledGroup(script.ReturnAnyScriptableObject() == null);
             if (GUILayout.Button("Build Avatar Data", GUILayout.Height(32)))
             {
                 BaseActions.BuildAvatarData(avatarDescriptor, script);
             }
+            EditorGUI.EndDisabledGroup();
 
             //Build Options
             EditorGUILayout.BeginVertical(GUI.skin.box);

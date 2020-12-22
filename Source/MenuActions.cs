@@ -194,7 +194,7 @@ namespace VRCAvatarActions
             {
                 parametersObject = ScriptableObject.CreateInstance<ExpressionParameters>();
                 parametersObject.name = "ExpressionParameters";
-                SaveAsset(parametersObject, ActionsDescriptor, "Generated");
+                SaveAsset(parametersObject, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
 
                 AvatarDescriptor.customExpressions = true;
                 AvatarDescriptor.expressionParameters = parametersObject;
