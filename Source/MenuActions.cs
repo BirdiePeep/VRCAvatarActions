@@ -113,18 +113,6 @@ namespace VRCAvatarActions
             BuildActionValues(validActions);
             BuildExpressionsMenu(this);
 
-            //Add parameters
-            foreach(var action in validActions)
-            {
-                void CheckLayer(AnimationLayer layer)
-                {
-                    if(!string.IsNullOrEmpty(action.parameter) && action.AffectsLayer(layer))
-                    {
-                        
-                    }
-                }
-            }
-
             //Build normal
             BuildNormalLayers(validActions, AnimationLayer.Action);
             BuildNormalLayers(validActions, AnimationLayer.FX);

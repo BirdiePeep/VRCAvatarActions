@@ -97,12 +97,8 @@ namespace VRCAvatarActions
             public class Animations
             {
                 //Source
-                public UnityEngine.AnimationClip enter;
-                public UnityEngine.AnimationClip exit;
-
-                //Generated
-                public AnimationClip enterGenerated;
-                public AnimationClip exitGenerated;
+                public AnimationClip enter;
+                public AnimationClip exit;
             }
             public Animations actionLayerAnimations = new Animations();
             public Animations fxLayerAnimations = new Animations();
@@ -409,12 +405,11 @@ namespace VRCAvatarActions
 
                 AnimationClip GetEnter()
                 {
-                    //Generate
-                    if (group.enterGenerated == null && GeneratesLayer(layer))
-                        group.enterGenerated = BuildGeneratedAnimation(group.enter);
-
-                    //Reutrn
-                    return group.enterGenerated != null ? group.enterGenerated : group.enter;
+                    //Find/Generate
+                    if (GeneratesLayer(layer))
+                        return FindOrGenerate(this.name + "_Generated", group.enter);
+                    else
+                        return group.enter;
                 }
                 AnimationClip GetExit()
                 {
@@ -422,15 +417,28 @@ namespace VRCAvatarActions
                     if (group.exit == null)
                         return GetEnter();
 
-                    //Generate
-                    if (group.exitGenerated == null && GeneratesLayer(layer))
-                        group.exitGenerated = BuildGeneratedAnimation(group.exit);
-
-                    //Return
-                    return group.exitGenerated != null ? group.exitGenerated : group.exit;
+                    //Find/Generate
+                    if (GeneratesLayer(layer))
+                        return FindOrGenerate(this.name + "_Generated_Exit", group.exit);
+                    else
+                        return group.exit;
                 }
             }
-            protected AnimationClip BuildGeneratedAnimation(AnimationClip source)
+            protected AnimationClip FindOrGenerate(string clipName, AnimationClip parentClip)
+            {
+                //Find/Generate
+                AnimationClip generated = null;
+                if (GeneratedClips.TryGetValue(clipName, out generated))
+                    return generated;
+                else
+                {
+                    //Generate
+                    generated = BuildGeneratedAnimation(clipName, parentClip);
+                    GeneratedClips.Add(clipName, generated);
+                }
+                return parentClip;
+            }
+            protected AnimationClip BuildGeneratedAnimation(string clipName, AnimationClip source)
             {
                 //Create new animation
                 AnimationClip animation = null;
@@ -464,7 +472,7 @@ namespace VRCAvatarActions
                 }
 
                 //Save
-                animation.name = this.name + "_Generated";
+                animation.name = clipName + "_Generated";
                 SaveAsset(animation, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
 
                 //Return
@@ -500,6 +508,7 @@ namespace VRCAvatarActions
             return null;
         }
         protected static bool BuildFailed = false;
+        protected static Dictionary<string, AnimationClip> GeneratedClips = new Dictionary<string, AnimationClip>();
 
         public static void BuildAvatarData(AvatarDescriptor desc, AvatarActions actionsDesc)
         {
@@ -588,7 +597,8 @@ namespace VRCAvatarActions
             }
 
             //Delete all generated animations
-            {
+            GeneratedClips.Clear();
+            /*{
                 var dirPath = AssetDatabase.GetAssetPath(ActionsDescriptor.ReturnAnyScriptableObject());
                 dirPath = dirPath.Replace(Path.GetFileName(dirPath), $"Generated/");
                 var files = System.IO.Directory.GetFiles(dirPath);
@@ -597,7 +607,7 @@ namespace VRCAvatarActions
                     if (file.Contains("_Generated"))
                         System.IO.File.Delete(file);
                 }
-            }
+            }*/
         }
         public static void BuildMain()
         {
