@@ -541,6 +541,9 @@ namespace VRCAvatarActions
                     var path = $"{dirPath}{name}.controller";
                     controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(path);
 
+                    //Add base layer
+                    controller.AddLayer("Base Layer");
+
                     //Save
                     descLayer.animatorController = controller;
                     descLayer.isDefault = false;
@@ -554,6 +557,8 @@ namespace VRCAvatarActions
                     //Clean layers
                     for(int i=0; i< controller.layers.Length; i++)
                     {
+                        if (controller.layers[i].name == "Base Layer")
+                            continue;
                         if (ActionsDescriptor.ignoreLayers.Contains(controller.layers[i].name))
                             continue;
 
