@@ -3,12 +3,9 @@ Unity script for creating avatar 3.0 content faster and easier.
 
 ## QUICK START
 
-- Begin by right clicking in the Assets higherarchy and selecting "Create/VRCAvatarActions/Actions Descriptor".
-- Select the new item called "Actions Descriptor".
-- In the inspector click "Add" next to the Menu Actions field.
-- Select the new item called "Menu Main".
+- Begin by right clicking in the Assets higherarchy and select "Create/VRCAvatarActions/Menu Actions/Menu Actions".
+- Select the new item called "Menu Actions".
 - In the inspector click "Add" to create a new action.
-- Define this action as you like, most of these are self explainitory.
     - **Name** - Display name in expressions menu.
     - **Icon** - Display icon in expressions menu.
     - **Type** - Type of action.
@@ -30,6 +27,8 @@ Unity script for creating avatar 3.0 content faster and easier.
 		
 ## BUILDING
 
-Click the "Build Avatar Data" button on the Actions Descriptor object.
+- Select your avatar and add a script called "Avatar Actions".
+- Drag your Menu Actions object into the Menu Actions field.
+- Click the "Build Avatar Data" button.
 
 Now you are ready to upload your avatar!
