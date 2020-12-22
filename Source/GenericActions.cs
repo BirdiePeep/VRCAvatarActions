@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -6,7 +7,6 @@ using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 
-#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
     [CreateAssetMenu(fileName = "Generic Actions", menuName = "VRCAvatarActions/Other Actions/Generic Actions")]

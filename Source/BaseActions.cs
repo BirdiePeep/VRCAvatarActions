@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEditor;
@@ -6,8 +7,8 @@ using UnityEditor.Animations;
 using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 using TrackingType = VRC.SDKBase.VRC_AnimatorTrackingControl.TrackingType;
+using VRC.SDK3.Avatars.Components;
 
-#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
     public abstract class BaseActions : ScriptableObject
@@ -557,7 +558,7 @@ namespace VRCAvatarActions
                     //Clean layers
                     for(int i=0; i< controller.layers.Length; i++)
                     {
-                        if (controller.layers[i].name == "Base Layer")
+                        if(controller.layers[i].name == "Base Layer")
                             continue;
                         if (ActionsDescriptor.ignoreLayers.Contains(controller.layers[i].name))
                             continue;
@@ -1234,6 +1235,11 @@ namespace VRCAvatarActions
                                 {
                                     //Get path
                                     property.path = FindPropertyPath(property.objRef);
+                                    if(property.path == null)
+                                    {
+                                        property.Clear();
+                                        EditorUtility.DisplayDialog("Error", "Unable to determine the object's path", "Okay");
+                                    }
                                 }
                                 else
                                 {
@@ -1596,7 +1602,7 @@ namespace VRCAvatarActions
                 obj = obj.transform.parent?.gameObject;
                 if (obj == null)
                     return null;
-                if (obj == avatarDescriptor.gameObject)
+                if (obj.GetComponent<VRCAvatarDescriptor>() != null) //Stop at the avatar descriptor
                     break;
                 path = $"{obj.name}/{path}";
             }

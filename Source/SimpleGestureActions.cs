@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿#if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
 
-#if UNITY_EDITOR
 namespace VRCAvatarActions
 {
 	[CreateAssetMenu(fileName = "Simple Gestures", menuName = "VRCAvatarActions/Other Actions/Simple Gestures")]
