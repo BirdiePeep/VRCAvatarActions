@@ -17,7 +17,7 @@ Unity script for creating avatar 3.0 content faster and easier.
     - **Fade in** - Time to fade in.
     - **Fade out** -Time to fade out.
     - **Parameter** - Which parameter is associated with this action.
-    - **Toggle Objects** - These object will be disabled by default and enabled when the control is active.
+    - **Object Properties** - Specify properties to modify when this control is active, without having to make an animation.
     - **Animations** - Animations to play when this control is active.
       - Enter - The base animation, it plays at the start.
       - Exit - An optional animtion to play when exiting.
