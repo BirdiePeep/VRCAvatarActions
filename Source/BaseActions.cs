@@ -8,6 +8,7 @@ using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 using TrackingType = VRC.SDKBase.VRC_AnimatorTrackingControl.TrackingType;
 using VRC.SDK3.Avatars.Components;
+using System;
 
 namespace VRCAvatarActions
 {
@@ -128,7 +129,7 @@ namespace VRCAvatarActions
             {
                 if (layerType == AnimationLayer.FX)
                 {
-                    if (objProperties.Count > 0)
+                    if (objectProperties.Count > 0)
                         return true;
                 }
                 return false;
@@ -144,32 +145,8 @@ namespace VRCAvatarActions
                 return true;
             }
 
-            //Properties
-            [System.Serializable]
-            public class Property
-            {
-                //Data
-                public string path;
-
-                //Meta-data
-                public GameObject objRef;
-
-                public void Clear()
-                {
-                    objRef = null;
-                    path = null;
-                }
-            }
-            public List<Property> objProperties = new List<Property>();
-
-            //Material Swaps
-            [System.Serializable]
-            public class MaterialSwap : Property
-            {
-                //Data
-                public List<Material> materials = new List<Material>();
-            }
-            public List<MaterialSwap> materialSwaps = new List<MaterialSwap>();
+            //Object Properties
+            public List<ObjectProperty> objectProperties = new List<ObjectProperty>();
 
             //Triggers
             [System.Serializable]
@@ -368,7 +345,8 @@ namespace VRCAvatarActions
             public bool foldoutMain = false;
             public bool foldoutTriggers = false;
             public bool foldoutIkOverrides = false;
-            public bool foldoutObjects = false;
+            public bool foldoutToggleObjects = false;
+            public bool foldoutMaterialSwaps = false;
             public bool foldoutAnimations = false;
 
             UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter=true)
@@ -434,9 +412,14 @@ namespace VRCAvatarActions
                 {
                     //Generate
                     generated = BuildGeneratedAnimation(clipName, parentClip);
-                    GeneratedClips.Add(clipName, generated);
+                    if (generated != null)
+                    {
+                        GeneratedClips.Add(clipName, generated);
+                        return generated;
+                    }
+                    else
+                        return parentClip;
                 }
-                return parentClip;
             }
             protected AnimationClip BuildGeneratedAnimation(string clipName, AnimationClip source)
             {
@@ -450,8 +433,8 @@ namespace VRCAvatarActions
                 else
                     animation = new AnimationClip();
 
-                //Toggle keyframes
-                foreach (var item in this.objProperties)
+                //Properties
+                foreach(var item in this.objectProperties)
                 {
                     //Is anything defined?
                     if (string.IsNullOrEmpty(item.path))
@@ -462,22 +445,92 @@ namespace VRCAvatarActions
                     if (obj == null)
                         continue;
 
-                    //Create curve
-                    var curve = new AnimationCurve();
-                    curve.AddKey(new Keyframe(0f, 1f));
-                    animation.SetCurve(item.path, typeof(GameObject), "m_IsActive", curve);
-
-                    //Disable the object
-                    obj.SetActive(false);
+                    switch(item.type)
+                    {
+                        case ObjectProperty.Type.ObjectToggle: AddObjectToggle(animation, item, obj); break;
+                        case ObjectProperty.Type.MaterialSwap: AddMaterialSwap(animation, item, obj); break;
+                        case ObjectProperty.Type.BlendShape: AddBlendShape(animation, item, obj); break;
+                    }
                 }
 
                 //Save
-                animation.name = clipName + "_Generated";
+                animation.name = clipName;
                 SaveAsset(animation, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
 
                 //Return
                 return animation;
             }
+        }
+
+        //Object Toggles
+        [System.Serializable]
+        public class ObjectProperty
+        {
+            public enum Type
+            {
+                ObjectToggle,
+                MaterialSwap,
+                BlendShape,
+                PlayAudio,
+            }
+            public Type type;
+
+            //Data
+            public string path;
+            public UnityEngine.Object[] objects;
+            public float[] values;
+
+            //Meta-data
+            public GameObject objRef;
+
+            public void Clear()
+            {
+                objRef = null;
+                path = null;
+                objects = null;
+                values = null;
+            }
+        }
+
+        static void AddObjectToggle(AnimationClip animation, ObjectProperty property, GameObject obj)
+        {
+            //Create curve
+            var curve = new AnimationCurve();
+            curve.AddKey(new Keyframe(0f, 1f));
+            animation.SetCurve(property.path, typeof(GameObject), "m_IsActive", curve);
+
+            //Disable the object
+            obj.SetActive(false);
+        }
+        static void AddMaterialSwap(AnimationClip animation, ObjectProperty property, GameObject obj)
+        {
+            //For each material
+            for (int i = 0; i < property.objects.Length; i++)
+            {
+                var material = property.objects[i];
+                if (material == null)
+                    continue;
+
+                //Create curve
+                var keyframes = new ObjectReferenceKeyframe[1];
+                var keyframe = new ObjectReferenceKeyframe();
+                keyframe.time = 0;
+                keyframe.value = material;
+                keyframes[0] = keyframe;
+                EditorCurveBinding binding = EditorCurveBinding.PPtrCurve(property.path, typeof(Renderer), $"m_Materials.Array.data[{i}]");
+                AnimationUtility.SetObjectReferenceCurve(animation, binding, keyframes);
+            }
+        }
+        static void AddBlendShape(AnimationClip animation, ObjectProperty property, GameObject obj)
+        {
+            var skinned = obj.GetComponent<SkinnedMeshRenderer>();
+            var name = skinned.sharedMesh.GetBlendShapeName((int)property.values[0]);
+            var value = property.values[1];
+
+            //Create curve
+            var curve = new AnimationCurve();
+            curve.AddKey(new Keyframe(0f, value));
+            animation.SetCurve(property.path, typeof(SkinnedMeshRenderer), $"blendShape.{name}", curve);
         }
 
         public enum BaseLayers
@@ -1208,87 +1261,182 @@ namespace VRCAvatarActions
             action.fadeIn = EditorGUILayout.FloatField("Fade In", action.fadeIn);
             action.fadeOut = EditorGUILayout.FloatField("Fade Out", action.fadeOut);
 
-            //Toggle Objects
+            //Properties
             {
-                EditorGUI.indentLevel += 1;
                 EditorGUILayout.BeginVertical(GUI.skin.box);
-                action.foldoutObjects = EditorGUILayout.Foldout(action.foldoutObjects, Title("Toggle Objects", action.objProperties.Count > 0));
-                if (action.foldoutObjects)
+                EditorGUI.indentLevel += 1;
                 {
-                    EditorGUILayout.BeginHorizontal();
+                    action.foldoutToggleObjects = EditorGUILayout.Foldout(action.foldoutToggleObjects, Title("Object Properties", action.objectProperties.Count > 0));
+                    if (action.foldoutToggleObjects)
                     {
-                        //Add
-                        if (GUILayout.Button("Add"))
+                        var clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", null, typeof(AnimationClip), false);
+                        if(clip != null)
                         {
-                            action.objProperties.Add(new BaseActions.Action.Property());
+                            var bindings = AnimationUtility.GetCurveBindings(clip);
+                            Debug.Log("Bindings");
+                            foreach(var binding in bindings)
+                            {
+                                Debug.Log("Name:" + binding.propertyName);
+                                Debug.Log("Path:" + binding.path);
+                            }
                         }
-                    }
-                    EditorGUILayout.EndHorizontal();
 
-                    for (int i = 0; i < action.objProperties.Count; i++)
-                    {
-                        var property = action.objProperties[i];
-                        bool propertyHasUpdated = false;
-                        bool isSelected = false;
-
-                        //Draw header
-                        var headerRect = EditorGUILayout.BeginHorizontal(isSelected ? boxSelected : boxUnselected);
+                        //Add
+                        EditorGUILayout.BeginHorizontal();
                         {
-                            EditorGUI.BeginChangeCheck();
-                            if (property.objRef == null)
-                                property.objRef = FindPropertyObject(avatarDescriptor.gameObject, property.path);
-
-                            property.objRef = (GameObject)EditorGUILayout.ObjectField("", property.objRef, typeof(GameObject), true, null);
-                            if (EditorGUI.EndChangeCheck())
-                            {
-                                if (property.objRef != null)
-                                {
-                                    //Get path
-                                    property.path = FindPropertyPath(property.objRef);
-                                    if(property.path == null)
-                                    {
-                                        property.Clear();
-                                        EditorUtility.DisplayDialog("Error", "Unable to determine the object's path", "Okay");
-                                    }
-                                }
-                                else
-                                {
-                                    property.Clear();
-                                }
-
-                                //Store
-                                propertyHasUpdated = true;
-                            }
-                            if (GUILayout.Button("X", GUILayout.Width(32)))
-                            {
-                                action.objProperties.RemoveAt(i);
-                                i--;
-                            }
-                            //action.enabled = EditorGUILayout.Toggle(action.enabled, GUILayout.Width(32));
+                            //Add
+                            if (GUILayout.Button("Add"))
+                                action.objectProperties.Add(new BaseActions.ObjectProperty());
                         }
                         EditorGUILayout.EndHorizontal();
 
-                        //Selection
-                        if (Event.current.type == EventType.MouseDown)
+                        //Properties
+                        for (int i = 0; i < action.objectProperties.Count; i++)
                         {
-                            if (headerRect.Contains(Event.current.mousePosition))
+                            var property = action.objectProperties[i];
+                            EditorGUILayout.BeginVertical(GUI.skin.box);
                             {
-                                SelectAction(action);
-                                Event.current.Use();
+                                //Header
+                                bool updated = false;
+                                EditorGUILayout.BeginHorizontal();
+                                {
+                                    //Object Ref
+                                    if(ObjectPropertyReferece(property))
+                                    {
+                                        //Clear prop data
+                                        property.objects = null;
+                                        property.values = null;
+                                    }
+
+                                    //Type
+                                    property.type = (BaseActions.ObjectProperty.Type)EditorGUILayout.EnumPopup(property.type);
+
+                                    //Delete
+                                    if (GUILayout.Button("X", GUILayout.Width(32)))
+                                    {
+                                        action.objectProperties.RemoveAt(i);
+                                        i--;
+                                    }
+                                }
+                                EditorGUILayout.EndHorizontal();
+
+                                if (property.objRef == null)
+                                    continue;
+
+                                //Body
+                                switch(property.type)
+                                {
+                                    case BaseActions.ObjectProperty.Type.MaterialSwap: MaterialSwapProperty(property); break;
+                                    case BaseActions.ObjectProperty.Type.BlendShape: BlendShapeProperty(property); break;
+                                }
                             }
+                            EditorGUILayout.EndHorizontal();
                         }
 
-                        //Finally update the array
-                        if (propertyHasUpdated)
-                        {
-                            action.objProperties[i] = property;
-                        }
+
                     }
-
-
                 }
-                EditorGUILayout.EndVertical();
+
                 EditorGUI.indentLevel -= 1;
+                EditorGUILayout.EndVertical();
+            }
+
+            bool ObjectPropertyReferece(BaseActions.ObjectProperty property)
+            {
+                //Object Ref
+                EditorGUI.BeginChangeCheck();
+                if (property.objRef == null)
+                    property.objRef = FindPropertyObject(avatarDescriptor.gameObject, property.path);
+                property.objRef = (GameObject)EditorGUILayout.ObjectField("", property.objRef, typeof(GameObject), true, null);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    if (property.objRef != null)
+                    {
+                        //Get path
+                        property.path = FindPropertyPath(property.objRef);
+                        if (property.path == null)
+                        {
+                            property.Clear();
+                            EditorUtility.DisplayDialog("Error", "Unable to determine the object's path", "Okay");
+                        }
+                        else
+                            return true;
+                    }
+                    else
+                        property.Clear();
+                }
+                return false;
+            }
+            void MaterialSwapProperty(BaseActions.ObjectProperty property)
+            {
+                //Get object materials
+                var mesh = property.objRef.GetComponent<Renderer>();
+                if (mesh == null)
+                {
+                    EditorGUILayout.HelpBox("GameObject doesn't have a Renderer component.", MessageType.Error);
+                    return;
+                }
+
+                //Materials
+                var materials = mesh.materials;
+                if (materials != null)
+                {
+                    //Create/Resize
+                    if (property.objects == null || property.objects.Length != materials.Length)
+                        property.objects = new UnityEngine.Object[materials.Length];
+
+                    //Materials
+                    for (int materialIter = 0; materialIter < materials.Length; materialIter++)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        {
+                            EditorGUILayout.LabelField("Material", GUILayout.MaxWidth(100));
+                            EditorGUI.BeginDisabledGroup(true);
+                            EditorGUILayout.ObjectField(materials[materialIter], typeof(Material), false);
+                            EditorGUI.EndDisabledGroup();
+                            property.objects[materialIter] = EditorGUILayout.ObjectField(property.objects[materialIter], typeof(Material), false) as Material;
+                        }
+                        EditorGUILayout.EndHorizontal();
+                    }
+                }
+            }
+            void BlendShapeProperty(BaseActions.ObjectProperty property)
+            {
+                //Get mesh
+                Mesh mesh = null;
+                var skinnedRenderer = property.objRef.GetComponent<SkinnedMeshRenderer>();
+                if (skinnedRenderer == null)
+                {
+                    EditorGUILayout.HelpBox("GameObject doesn't have a MeshFilter or SkinnedMeshRenderer component.", MessageType.Error);
+                    return;
+                }
+                mesh = skinnedRenderer.sharedMesh;
+
+                //Setup data
+                if (property.values == null || property.values.Length != 2)
+                    property.values = new float[2];
+
+                var popup = new string[mesh.blendShapeCount];
+                for (int i = 0; i < mesh.blendShapeCount; i++)
+                    popup[i] = mesh.GetBlendShapeName(i);
+
+                //Editor
+                EditorGUILayout.BeginHorizontal();
+                {
+                    //Property
+                    property.values[0] = EditorGUILayout.Popup((int)property.values[0], popup);
+
+                    //Value
+                    EditorGUI.BeginChangeCheck();
+                    property.values[1] = EditorGUILayout.Slider(property.values[1], 0f, 100f);
+                    if(EditorGUI.EndChangeCheck())
+                    {
+                        //I'd like to preview the change, but preserving the value
+                        //TODO
+                        //skinnedRenderer.SetBlendShapeWeight((int)property.values[0], property.values[1]);
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
             }
 
             //Animations
@@ -1564,7 +1712,7 @@ namespace VRCAvatarActions
                         //Create animation    
                         clip = new AnimationClip();
                         clip.name = newAssetName;
-                        BaseActions.SaveAsset(clip, this.script as BaseActions, "Generated", true);
+                        BaseActions.SaveAsset(clip, this.script as BaseActions, "", true);
                     }
                 }
                 EditorGUI.EndDisabledGroup();

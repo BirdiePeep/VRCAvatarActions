@@ -158,7 +158,7 @@ namespace VRCAvatarActions
                 else
                 {
                     //Check if valid
-                    if (action.HasAnimations() || action.objProperties.Count > 0)
+                    if (action.AffectsAnyLayer())
                         output.Add(action);
                 }
 

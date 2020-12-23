@@ -123,7 +123,6 @@ namespace VRCAvatarActions
 
 		protected string DrawParameterDropDown(string parameter, string label)
         {
-            bool parameterFound = false;
             EditorGUILayout.BeginHorizontal();
             {
                 if (avatarDescriptor != null)
@@ -133,7 +132,6 @@ namespace VRCAvatarActions
                     if (string.IsNullOrEmpty(parameter))
                     {
                         currentIndex = -1;
-                        parameterFound = true;
                     }
                     else
                     {
@@ -143,7 +141,6 @@ namespace VRCAvatarActions
                             var item = avatarDescriptor.GetExpressionParameter(i);
                             if (item.name == parameter)
                             {
-                                parameterFound = true;
                                 currentIndex = i;
                                 break;
                             }
@@ -177,9 +174,9 @@ namespace VRCAvatarActions
             }
             EditorGUILayout.EndHorizontal();
 
-            if (!parameterFound)
+            if(string.IsNullOrEmpty(parameter))
             {
-                EditorGUILayout.HelpBox("Parameter doesn't exist.  It will automatically be created in the build process.", MessageType.Warning);
+                EditorGUILayout.HelpBox("Parameter required.", MessageType.Error);
             }
 
             return parameter;
