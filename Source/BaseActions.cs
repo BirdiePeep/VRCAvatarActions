@@ -1269,7 +1269,7 @@ namespace VRCAvatarActions
                     action.foldoutToggleObjects = EditorGUILayout.Foldout(action.foldoutToggleObjects, Title("Object Properties", action.objectProperties.Count > 0));
                     if (action.foldoutToggleObjects)
                     {
-                        var clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", null, typeof(AnimationClip), false);
+                        /*var clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", null, typeof(AnimationClip), false);
                         if(clip != null)
                         {
                             var bindings = AnimationUtility.GetCurveBindings(clip);
@@ -1279,7 +1279,7 @@ namespace VRCAvatarActions
                                 Debug.Log("Name:" + binding.propertyName);
                                 Debug.Log("Path:" + binding.path);
                             }
-                        }
+                        }*/
 
                         //Add
                         EditorGUILayout.BeginHorizontal();
@@ -1320,14 +1320,14 @@ namespace VRCAvatarActions
                                 }
                                 EditorGUILayout.EndHorizontal();
 
-                                if (property.objRef == null)
-                                    continue;
-
                                 //Body
-                                switch(property.type)
+                                if (property.objRef != null)
                                 {
-                                    case BaseActions.ObjectProperty.Type.MaterialSwap: MaterialSwapProperty(property); break;
-                                    case BaseActions.ObjectProperty.Type.BlendShape: BlendShapeProperty(property); break;
+                                    switch (property.type)
+                                    {
+                                        case BaseActions.ObjectProperty.Type.MaterialSwap: MaterialSwapProperty(property); break;
+                                        case BaseActions.ObjectProperty.Type.BlendShape: BlendShapeProperty(property); break;
+                                    }
                                 }
                             }
                             EditorGUILayout.EndHorizontal();
@@ -1336,7 +1336,6 @@ namespace VRCAvatarActions
 
                     }
                 }
-
                 EditorGUI.indentLevel -= 1;
                 EditorGUILayout.EndVertical();
             }
