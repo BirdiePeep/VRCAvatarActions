@@ -471,7 +471,6 @@ namespace VRCAvatarActions
                 ObjectToggle,
                 MaterialSwap,
                 BlendShape,
-                PlayAudio,
             }
             public Type type;
 
