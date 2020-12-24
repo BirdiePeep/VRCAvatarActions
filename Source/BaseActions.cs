@@ -611,7 +611,6 @@ namespace VRCAvatarActions
                     descLayer.isDefault = false;
                     AvatarDescriptor.baseAnimationLayers[(int)index] = descLayer;
                     EditorUtility.SetDirty(AvatarDescriptor);
-                    AssetDatabase.SaveAssets();
                 }
 
                 //Cleanup Layers
@@ -687,6 +686,10 @@ namespace VRCAvatarActions
             var components = AvatarDescriptor.gameObject.GetComponentsInChildren<ITemporaryComponent>();
             foreach (var comp in components)
                 GameObject.DestroyImmediate(comp as MonoBehaviour);
+
+            //Save
+            EditorUtility.SetDirty(AvatarDescriptor);
+            AssetDatabase.SaveAssets();
         }
 
         //Normal
@@ -1376,7 +1379,7 @@ namespace VRCAvatarActions
                 }
 
                 //Materials
-                var materials = mesh.materials;
+                var materials = mesh.sharedMaterials;
                 if (materials != null)
                 {
                     //Create/Resize

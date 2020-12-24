@@ -8,10 +8,11 @@ using VRC.SDK3.Avatars.Components;
 #if UNITY_EDITOR
 namespace VRCAvatarActions
 {
-    [RequireComponent(typeof(VRCAvatarDescriptor))]
+    [ExecuteAlways]
     public class AvatarActions : MonoBehaviour
     {
         //Descriptor Data
+        public VRCAvatarDescriptor avatar;
         public MenuActions menuActions;
         public List<NonMenuActions> otherActions = new List<NonMenuActions>();
 
@@ -37,6 +38,15 @@ namespace VRCAvatarActions
             }
             return null;
         }
+
+        public void Awake()
+        {
+            if(GetComponent<VRCAvatarDescriptor>() != null)
+            {
+                EditorUtility.DisplayDialog("Error", "You are unable to add this script directly to an avatar. Please place this on a blank game object in the scene.", "Okay");
+                GameObject.DestroyImmediate(this);
+            }
+        }
     }
 
     [CustomEditor(typeof(AvatarActions))]
@@ -48,7 +58,19 @@ namespace VRCAvatarActions
         public override void OnInspectorGUI()
         {
             script = target as AvatarActions;
-            avatarDescriptor = script.gameObject.GetComponent<VRCAvatarDescriptor>();
+            avatarDescriptor = script.avatar;
+
+            EditorGUI.BeginChangeCheck();
+            InspectorBody();
+            if(EditorGUI.EndChangeCheck())
+            {
+                EditorUtility.SetDirty(script);
+            }
+        }
+        void InspectorBody()
+        {
+            //Target Avatar
+            script.avatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField("Avatar", script.avatar, typeof(VRCAvatarDescriptor), true);
 
             //Menu Actions
             EditorGUILayout.BeginVertical(GUI.skin.box);
