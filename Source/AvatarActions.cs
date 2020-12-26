@@ -113,7 +113,7 @@ namespace VRCAvatarActions
             EditorBase.Divider();
 
             //Build
-            EditorGUI.BeginDisabledGroup(script.ReturnAnyScriptableObject() == null);
+            EditorGUI.BeginDisabledGroup(script.ReturnAnyScriptableObject() == null || avatarDescriptor == null);
             if (GUILayout.Button("Build Avatar Data", GUILayout.Height(32)))
             {
                 BaseActions.BuildAvatarData(avatarDescriptor, script);
@@ -172,24 +172,33 @@ namespace VRCAvatarActions
             script.foldoutBuildData = EditorGUILayout.Foldout(script.foldoutBuildData, "Built Data");
             if (script.foldoutBuildData)
             {
-                void AnimationController(BaseActions.BaseLayers index, string name)
+                void AnimationController(VRCAvatarDescriptor.AnimLayerType animLayerType, string name)
                 {
-                    var layer = avatarDescriptor.baseAnimationLayers[(int)index];
-                    var controller = layer.animatorController as UnityEditor.Animations.AnimatorController;
+                    VRCAvatarDescriptor.CustomAnimLayer descLayer = new VRCAvatarDescriptor.CustomAnimLayer();
+                    foreach (var layer in avatarDescriptor.baseAnimationLayers)
+                    {
+                        if (layer.type == animLayerType)
+                        {
+                            descLayer = layer;
+                            break;
+                        }
+                    }
+
+                    var controller = descLayer.animatorController as UnityEditor.Animations.AnimatorController;
 
                     EditorGUI.BeginChangeCheck();
                     controller = (UnityEditor.Animations.AnimatorController)EditorGUILayout.ObjectField(name, controller, typeof(UnityEditor.Animations.AnimatorController), false);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        layer.animatorController = controller;
-                        layer.isDefault = false;
+                        descLayer.animatorController = controller;
+                        descLayer.isDefault = false;
                     }
                 }
 
                 EditorGUILayout.HelpBox("Objects built and linked on the avatar descriptor. Anything referenced here will be modified and possibly destroyed by the compiling process.", MessageType.Info);
 
-                AnimationController(BaseActions.BaseLayers.Action, "Action Controller");
-                AnimationController(BaseActions.BaseLayers.FX, "FX Controller");
+                AnimationController(VRCAvatarDescriptor.AnimLayerType.Action, "Action Controller");
+                AnimationController(VRCAvatarDescriptor.AnimLayerType.FX, "FX Controller");
                 avatarDescriptor.expressionsMenu = (ExpressionsMenu)EditorGUILayout.ObjectField("Expressions Menu", avatarDescriptor.expressionsMenu, typeof(ExpressionsMenu), false);
                 avatarDescriptor.expressionParameters = (ExpressionParameters)EditorGUILayout.ObjectField("Expression Parameters", avatarDescriptor.expressionParameters, typeof(ExpressionParameters), false);
             }

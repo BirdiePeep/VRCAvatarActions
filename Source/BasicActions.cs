@@ -9,8 +9,8 @@ using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionPar
 
 namespace VRCAvatarActions
 {
-    [CreateAssetMenu(fileName = "Generic Actions", menuName = "VRCAvatarActions/Other Actions/Generic Actions")]
-    public class GenericActions : NonMenuActions
+    [CreateAssetMenu(fileName = "Basic", menuName = "VRCAvatarActions/Other Actions/Basic")]
+    public class BasicActions : NonMenuActions
     {
         [System.Serializable]
         public class GenericAction : Action
@@ -26,6 +26,7 @@ namespace VRCAvatarActions
                 return false;
             }
         }
+        public bool anyState = false;
         public List<GenericAction> actions = new List<GenericAction>();
 
         public override void GetActions(List<Action> output)
@@ -35,9 +36,9 @@ namespace VRCAvatarActions
         }
         public override Action AddAction()
         {
-            var action = new GenericAction();
-            actions.Add(action);
-            return action;
+            var result = new GenericAction();
+            actions.Add(result);
+            return result;
         }
         public override void RemoveAction(Action action)
         {
@@ -47,6 +48,7 @@ namespace VRCAvatarActions
         {
             actions.Insert(index, action as GenericAction);
         }
+
 
         public override void Build(MenuActions.MenuAction parentAction)
         {
@@ -78,12 +80,12 @@ namespace VRCAvatarActions
         }
     }
 
-    [CustomEditor(typeof(GenericActions))]
+    [CustomEditor(typeof(BasicActions))]
     public class GenericActionsEditor : BaseActionsEditor
     {
         public override void Inspector_Header()
         {
-            //Nothing
+            EditorGUILayout.HelpBox("Basic Actions - Actions with no default triggers.", MessageType.Info);
         }
     }
 }

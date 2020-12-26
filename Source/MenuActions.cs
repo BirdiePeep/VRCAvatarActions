@@ -6,11 +6,10 @@ using UnityEditor.Animations;
 using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
-using UnityEngine.Experimental.UIElements;
 
 namespace VRCAvatarActions
 {
-    [CreateAssetMenu(fileName = "Menu Actions", menuName = "VRCAvatarActions/Menu Actions/Menu Actions")]
+    [CreateAssetMenu(fileName = "Menu", menuName = "VRCAvatarActions/Menu Actions/Menu")]
     public class MenuActions : BaseActions
     {
         [System.Serializable]
@@ -19,13 +18,13 @@ namespace VRCAvatarActions
             public enum MenuType
             {
                 //Action
-                Toggle = 0,
-                Button = 1,
-                Slider = 2,
-                SubMenu = 100,
-                PreExisting = 101,
+                Toggle = 4453,
+                Button = 3754,
+                Slider = 8579,
+                SubMenu = 3641,
+                PreExisting = 5697,
             }
-            public MenuType menuType;
+            public MenuType menuType = MenuType.Toggle;
 
             public Texture2D icon;
             public string parameter;
@@ -63,6 +62,24 @@ namespace VRCAvatarActions
                 }
                 return base.ShouldBuild();
             }
+            public override void CopyTo(Action clone)
+            {
+                base.CopyTo(clone);
+
+                var menuClone = clone as MenuAction;
+                if(menuClone != null)
+                {
+                    menuClone.icon = icon;
+                    menuClone.parameter = parameter;
+                    menuClone.menuType = menuType;
+                    menuClone.subMenu = subMenu;
+                    menuClone.foldoutSubActions = foldoutSubActions;
+
+                    menuClone.subActions.Clear();
+                    foreach (var item in subActions)
+                        menuClone.subActions.Add(item);
+                }
+            }
 
             //Build
             public override string GetLayerGroup()
@@ -85,9 +102,9 @@ namespace VRCAvatarActions
         }
         public override Action AddAction()
         {
-            var action = new MenuAction();
-            actions.Add(action);
-            return action;
+            var result = new MenuAction();
+            actions.Add(result);
+            return result;
         }
         public override void InsertAction(int index, Action action)
         {
@@ -518,6 +535,10 @@ namespace VRCAvatarActions
     {
         MenuActions menuScript;
 
+        public override void Inspector_Header()
+        {
+            EditorGUILayout.HelpBox("Menu Actions - Actions that are displayed in the avatar's action menu.", MessageType.Info);
+        }
         public override void Inspector_Body()
         {
             menuScript = target as MenuActions;

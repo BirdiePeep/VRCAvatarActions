@@ -26,7 +26,7 @@ namespace VRCAvatarActions
             HandGun,
             ThumbsUp,
         }
-        public enum VisimeEnum
+        public enum VisemeEnum
         {
             Sil,
             PP,
@@ -53,32 +53,32 @@ namespace VRCAvatarActions
         }
         public enum ParameterEnum
         {
-            Custom,
-            GestureLeft,
-            GestureRight,
-            GestureLeftWeight,
-            GestureRightWeight,
-            Visime,
-            AFK,
-            VRMode,
-            TrackingType,
-            MuteSelf,
-            AngularY,
-            VelocityX,
-            VelocityY,
-            VelocityZ,
-            Upright,
-            Grounded,
-            Seated,
-            InStation,
-            IsLocal
+            Custom = 0,
+            GestureLeft = 1380,
+            GestureRight = 5952,
+            GestureLeftWeight = 4777,
+            GestureRightWeight = 1712,
+            Viseme = 9866,
+            AFK = 4804,
+            VRMode = 1291,
+            TrackingType = 9993,
+            MuteSelf = 1566,
+            AngularY = 5775,
+            VelocityX = 6015,
+            VelocityY = 1208,
+            VelocityZ = 7440,
+            Upright = 4434,
+            Grounded = 5912,
+            Seated = 1173,
+            InStation = 1247,
+            IsLocal = 7648,
         }
         public enum ParameterType
         {
-            Bool,
-            Int,
-            Float,
-            Trigger
+            Bool = 0,
+            Int = 1,
+            Float = 2,
+            Trigger = 3
         }
         public enum AnimationLayer
         {
@@ -104,6 +104,7 @@ namespace VRCAvatarActions
             public Animations actionLayerAnimations = new Animations();
             public Animations fxLayerAnimations = new Animations();
             public float fadeIn = 0;
+            public float hold = 0;
             public float fadeOut = 0;
 
             public bool HasAnimations()
@@ -152,10 +153,20 @@ namespace VRCAvatarActions
             [System.Serializable]
             public class Trigger
             {
+                public Trigger()
+                {
+                }
+                public Trigger(Trigger source)
+                {
+                    this.type = source.type;
+                    this.foldout = source.foldout;
+                    foreach (var item in source.conditions)
+                        this.conditions.Add(new Condition(item));
+                }
                 public enum Type
                 {
-                    Enter,
-                    Exit,
+                    Enter = 0,
+                    Exit = 1,
                 }
                 public Type type;
                 public List<Condition> conditions = new List<Condition>();
@@ -165,6 +176,17 @@ namespace VRCAvatarActions
             [System.Serializable]
             public class Condition
             {
+                public Condition()
+                {
+                }
+                public Condition(Condition source)
+                {
+                    this.type = source.type;
+                    this.parameter = string.Copy(source.parameter);
+                    this.logic = source.logic;
+                    this.value = source.value;
+                    this.shared = source.shared;
+                }
                 public enum Logic
                 {
                     Equals = 0,
@@ -213,6 +235,19 @@ namespace VRCAvatarActions
                 public bool eyes;
                 public bool mouth;
 
+                public BodyOverride(BodyOverride source)
+                {
+                    this.head = source.head;
+                    this.leftHand = source.leftHand;
+                    this.rightHand = source.rightHand;
+                    this.hip = source.hip;
+                    this.leftFoot = source.leftFoot;
+                    this.rightFoot = source.rightFoot;
+                    this.leftFingers = source.leftFingers;
+                    this.rightFingers = source.rightFingers;
+                    this.eyes = source.eyes;
+                    this.mouth = source.mouth;
+                }
                 public void SetAll(bool value)
                 {
                     head = value;
@@ -293,7 +328,7 @@ namespace VRCAvatarActions
                 }
                 else
                 {
-                    if(triggerType == Trigger.Type.Enter)
+                    if (triggerType == Trigger.Type.Enter)
                     {
                         //Add single transition
                         var transition = lastState.AddTransition(state);
@@ -332,7 +367,7 @@ namespace VRCAvatarActions
 
                 void Finalize(AnimatorStateTransition transition)
                 {
-                    if(transition.conditions.Length == 0)
+                    if (transition.conditions.Length == 0)
                         transition.AddCondition(AnimatorConditionMode.If, 1, "True");
                 }
             }
@@ -349,7 +384,7 @@ namespace VRCAvatarActions
             public bool foldoutMaterialSwaps = false;
             public bool foldoutAnimations = false;
 
-            UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter=true)
+            UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter = true)
             {
                 //Find layer group
                 Action.Animations group;
@@ -434,22 +469,23 @@ namespace VRCAvatarActions
                     animation = new AnimationClip();
 
                 //Properties
-                foreach(var item in this.objectProperties)
+                foreach (var item in this.objectProperties)
                 {
                     //Is anything defined?
                     if (string.IsNullOrEmpty(item.path))
                         continue;
 
                     //Find object
-                    var obj = BaseActionsEditor.FindPropertyObject(AvatarDescriptor.gameObject, item.path);
-                    if (obj == null)
+                    item.objRef = BaseActionsEditor.FindPropertyObject(AvatarDescriptor.gameObject, item.path);
+                    if (item.objRef == null)
                         continue;
 
-                    switch(item.type)
+                    switch (item.type)
                     {
-                        case ObjectProperty.Type.ObjectToggle: AddObjectToggle(animation, item, obj); break;
-                        case ObjectProperty.Type.MaterialSwap: AddMaterialSwap(animation, item, obj); break;
-                        case ObjectProperty.Type.BlendShape: AddBlendShape(animation, item, obj); break;
+                        case ObjectProperty.Type.ObjectToggle: AddObjectToggle(animation, item, item.objRef); break;
+                        case ObjectProperty.Type.MaterialSwap: AddMaterialSwap(animation, item, item.objRef); break;
+                        case ObjectProperty.Type.BlendShape: (new ObjectProperty.BlendShape(item)).AddKeyframes(animation); break;
+                        case ObjectProperty.Type.PlayAudio: (new ObjectProperty.PlayAudio(item)).AddKeyframes(animation); break;
                     }
                 }
 
@@ -460,34 +496,42 @@ namespace VRCAvatarActions
                 //Return
                 return animation;
             }
-        }
 
-        //Object Toggles
-        [System.Serializable]
-        public class ObjectProperty
-        {
-            public enum Type
+            public virtual void CopyTo(Action clone)
             {
-                ObjectToggle,
-                MaterialSwap,
-                BlendShape,
-            }
-            public Type type;
+                //Generic
+                clone.name = string.Copy(this.name);
+                clone.enabled = this.enabled;
 
-            //Data
-            public string path;
-            public UnityEngine.Object[] objects;
-            public float[] values;
+                //Animation
+                clone.actionLayerAnimations.enter = this.actionLayerAnimations.enter;
+                clone.actionLayerAnimations.exit = this.actionLayerAnimations.exit;
+                clone.fxLayerAnimations.enter = this.fxLayerAnimations.enter;
+                clone.fxLayerAnimations.exit = this.fxLayerAnimations.exit;
+                clone.fadeIn = this.fadeIn;
+                clone.hold = this.hold;
+                clone.fadeOut = this.fadeOut;
 
-            //Meta-data
-            public GameObject objRef;
+                //Object Properties
+                clone.objectProperties.Clear();
+                foreach (var prop in this.objectProperties)
+                    clone.objectProperties.Add(new ObjectProperty(prop));
 
-            public void Clear()
-            {
-                objRef = null;
-                path = null;
-                objects = null;
-                values = null;
+                //Triggers
+                clone.triggers.Clear();
+                foreach (var trigger in this.triggers)
+                    clone.triggers.Add(new Action.Trigger(trigger));
+
+                //Body overrides
+                clone.bodyOverride = new BodyOverride(this.bodyOverride);
+
+                //Meta
+                clone.foldoutMain = this.foldoutMain;
+                clone.foldoutTriggers = this.foldoutTriggers;
+                clone.foldoutIkOverrides = this.foldoutIkOverrides;
+                clone.foldoutToggleObjects = this.foldoutToggleObjects;
+                clone.foldoutMaterialSwaps = this.foldoutMaterialSwaps;
+                clone.foldoutAnimations = this.foldoutAnimations;
             }
         }
 
@@ -520,35 +564,27 @@ namespace VRCAvatarActions
                 AnimationUtility.SetObjectReferenceCurve(animation, binding, keyframes);
             }
         }
-        static void AddBlendShape(AnimationClip animation, ObjectProperty property, GameObject obj)
-        {
-            var skinned = obj.GetComponent<SkinnedMeshRenderer>();
-            var name = skinned.sharedMesh.GetBlendShapeName((int)property.values[0]);
-            var value = property.values[1];
-
-            //Create curve
-            var curve = new AnimationCurve();
-            curve.AddKey(new Keyframe(0f, value));
-            animation.SetCurve(property.path, typeof(SkinnedMeshRenderer), $"blendShape.{name}", curve);
-        }
-
-        public enum BaseLayers
-        {
-            Action = 3,
-            FX = 4
-        }
 
         public abstract void GetActions(List<Action> output);
         public abstract Action AddAction();
         public abstract void RemoveAction(Action action);
         public abstract void InsertAction(int index, Action action);
 
+        public virtual bool CanUseLayer(BaseActions.AnimationLayer layer)
+        {
+            return true;
+        }
+        public virtual bool ActionsHaveExit()
+        {
+            return true;
+        }
+
         protected static AvatarDescriptor AvatarDescriptor = null;
         protected static AvatarActions ActionsDescriptor = null;
         protected static List<ExpressionParameters.Parameter> AllParameters = new List<ExpressionParameters.Parameter>();
-        protected static UnityEditor.Animations.AnimatorController ActionController;
-        protected static UnityEditor.Animations.AnimatorController FxController;
-        protected static UnityEditor.Animations.AnimatorController GetController(AnimationLayer layer)
+        protected static AnimatorController ActionController;
+        protected static AnimatorController FxController;
+        protected static AnimatorController GetController(AnimationLayer layer)
         {
             switch(layer)
             {
@@ -584,13 +620,25 @@ namespace VRCAvatarActions
         {
             //Action Controller
             AvatarDescriptor.customizeAnimationLayers = true;
-            ActionController = GetController(BaseActions.BaseLayers.Action, "AnimationController_Action");
-            FxController = GetController(BaseActions.BaseLayers.FX, "AnimationController_FX");
+            ActionController = GetController(AvatarDescriptor.AnimLayerType.Action, "AnimationController_Action");
+            FxController = GetController(AvatarDescriptor.AnimLayerType.FX, "AnimationController_FX");
 
-            AnimatorController GetController(BaseActions.BaseLayers index, string name)
+            AnimatorController GetController(AvatarDescriptor.AnimLayerType animLayerType, string name)
             {
+                //Find desc layer
+                AvatarDescriptor.CustomAnimLayer descLayer = new AvatarDescriptor.CustomAnimLayer();
+                int descLayerIndex = 0;
+                foreach(var layer in AvatarDescriptor.baseAnimationLayers)
+                {
+                    if(layer.type == animLayerType)
+                    {
+                        descLayer = layer;
+                        break;
+                    }
+                    descLayerIndex++;
+                }
+
                 //Find/Create Layer
-                var descLayer = AvatarDescriptor.baseAnimationLayers[(int)index];
                 var controller = descLayer.animatorController as UnityEditor.Animations.AnimatorController;
                 if (controller == null || descLayer.isDefault)
                 {
@@ -609,7 +657,7 @@ namespace VRCAvatarActions
                     //Save
                     descLayer.animatorController = controller;
                     descLayer.isDefault = false;
-                    AvatarDescriptor.baseAnimationLayers[(int)index] = descLayer;
+                    AvatarDescriptor.baseAnimationLayers[descLayerIndex] = descLayer;
                     EditorUtility.SetDirty(AvatarDescriptor);
                 }
 
@@ -702,7 +750,7 @@ namespace VRCAvatarActions
             layer.stateMachine.states = null;
             layer.stateMachine.entryPosition = StatePosition(-1, 0);
             layer.stateMachine.anyStatePosition = StatePosition(-1, 1);
-            layer.stateMachine.exitPosition = StatePosition(6, 0);
+            layer.stateMachine.exitPosition = StatePosition(7, 0);
 
             //Animation Layer Weight
             int layerIndex = 0;
@@ -755,7 +803,7 @@ namespace VRCAvatarActions
                 //Enable state
                 {
                     var state = layer.stateMachine.AddState(action.name + "_Enable", StatePosition(2, actionIter));
-                    state.motion = action.actionLayerAnimations.enter;
+                    state.motion = action.GetAnimation(AnimationLayer.Action, true);
 
                     //Transition
                     var transition = lastState.AddTransition(state);
@@ -768,10 +816,29 @@ namespace VRCAvatarActions
                     lastState = state;
                 }
 
+                //Hold
+                if (action.hold > 0)
+                {
+                    //Hold
+                    {
+                        var state = layer.stateMachine.AddState(action.name + "_Hold", StatePosition(3, actionIter));
+                        state.motion = action.GetAnimation(AnimationLayer.Action, true);
+
+                        //Transition
+                        var transition = lastState.AddTransition(state);
+                        transition.hasExitTime = true;
+                        transition.exitTime = action.hold;
+                        transition.duration = 0;
+
+                        //Store
+                        lastState = state;
+                    }
+                }
+
                 //Disable state
                 {
-                    var state = layer.stateMachine.AddState(action.name + "_Disable", StatePosition(3, actionIter));
-                    state.motion = action.actionLayerAnimations.exit != null ? action.actionLayerAnimations.exit : action.actionLayerAnimations.enter;
+                    var state = layer.stateMachine.AddState(action.name + "_Disable", StatePosition(4, actionIter));
+                    state.motion = action.GetAnimation(AnimationLayer.Action, false);
 
                     //Transition
                     action.AddTransitions(controller, lastState, state, 0, Action.Trigger.Type.Exit, parentAction);
@@ -787,8 +854,8 @@ namespace VRCAvatarActions
 
                 //Complete state
                 {
-                    var state = layer.stateMachine.AddState(action.name + "_Complete", StatePosition(4, actionIter));
-                    state.motion = action.actionLayerAnimations.exit != null ? action.actionLayerAnimations.exit : action.actionLayerAnimations.enter;
+                    var state = layer.stateMachine.AddState(action.name + "_Complete", StatePosition(5, actionIter));
+                    state.motion = action.GetAnimation(AnimationLayer.Action, false);
 
                     //Transition
                     var transition = lastState.AddTransition(state);
@@ -803,7 +870,7 @@ namespace VRCAvatarActions
 
                 //Cleanup state
                 {
-                    var state = layer.stateMachine.AddState(action.name + "_Cleanup", StatePosition(5, actionIter));
+                    var state = layer.stateMachine.AddState(action.name + "_Cleanup", StatePosition(6, actionIter));
 
                     //Transition
                     var transition = lastState.AddTransition(state);
@@ -846,7 +913,7 @@ namespace VRCAvatarActions
             layer.stateMachine.states = null;
             layer.stateMachine.entryPosition = StatePosition(-1, 0);
             layer.stateMachine.anyStatePosition = StatePosition(-1, 1);
-            layer.stateMachine.exitPosition = StatePosition(5, 0);
+            layer.stateMachine.exitPosition = StatePosition(6, 0);
 
             //Animation Layer Weight
             var layerIndex = GetLayerIndex(controller, layer);
@@ -882,11 +949,28 @@ namespace VRCAvatarActions
                     lastState = state;
                 }
 
+                //Hold
+                if (action.hold > 0)
+                {
+                    var state = layer.stateMachine.AddState(action.name + "_Hold", StatePosition(2, actionIter));
+                    state.motion = action.GetAnimation(layerType, true);
+
+                    //Transition
+                    var transition = lastState.AddTransition(state);
+                    transition.hasExitTime = true;
+                    transition.exitTime = action.hold;
+                    transition.duration = 0;
+
+                    //Store
+                    lastState = state;
+                }
+
+                //Exit
                 if(action.HasExit() || parentAction != null)
                 {
                     //Disable
                     {
-                        var state = layer.stateMachine.AddState(action.name + "_Disable", StatePosition(2, actionIter));
+                        var state = layer.stateMachine.AddState(action.name + "_Disable", StatePosition(3, actionIter));
                         state.motion = action.GetAnimation(layerType, false);
 
                         //Transition
@@ -898,7 +982,7 @@ namespace VRCAvatarActions
 
                     //Complete
                     {
-                        var state = layer.stateMachine.AddState(action.name + "_Complete", StatePosition(3, actionIter));
+                        var state = layer.stateMachine.AddState(action.name + "_Complete", StatePosition(4, actionIter));
 
                         //Transition
                         var transition = lastState.AddTransition(state);
@@ -912,7 +996,7 @@ namespace VRCAvatarActions
 
                     //Cleanup
                     {
-                        var state = layer.stateMachine.AddState(action.name + "_Cleanup", StatePosition(4, actionIter));
+                        var state = layer.stateMachine.AddState(action.name + "_Cleanup", StatePosition(5, actionIter));
 
                         //Transition
                         var transition = lastState.AddTransition(state);
@@ -1018,7 +1102,7 @@ namespace VRCAvatarActions
                         paramType = AnimatorControllerParameterType.Bool;
                         break;
                     //Int
-                    case ParameterEnum.Visime:
+                    case ParameterEnum.Viseme:
                     case ParameterEnum.GestureLeft:
                     case ParameterEnum.GestureRight:
                     case ParameterEnum.VRMode:
@@ -1210,28 +1294,38 @@ namespace VRCAvatarActions
                     action.name = "New Action";
                 }
 
-                //Move Up
-                if (GUILayout.Button("Move Up"))
+                //Selected
+                EditorGUI.BeginDisabledGroup(selectedAction == null);
                 {
-                    var temp = new List<BaseActions.Action>();
-                    script.GetActions(temp);
+                    //Move Up
+                    if (GUILayout.Button("Move Up"))
+                    {
+                        var temp = new List<BaseActions.Action>();
+                        script.GetActions(temp);
 
-                    var index = temp.IndexOf(selectedAction);
-                    script.RemoveAction(selectedAction);
-                    script.InsertAction(Mathf.Max(0, index - 1), selectedAction);
+                        var index = temp.IndexOf(selectedAction);
+                        script.RemoveAction(selectedAction);
+                        script.InsertAction(Mathf.Max(0, index - 1), selectedAction);
+                    }
+
+                    //Move Down
+                    if (GUILayout.Button("Move Down"))
+                    {
+                        var temp = new List<BaseActions.Action>();
+                        script.GetActions(temp);
+
+                        var index = temp.IndexOf(selectedAction);
+                        script.RemoveAction(selectedAction);
+                        script.InsertAction(Mathf.Min(temp.Count - 1, index + 1), selectedAction);
+                    }
+
+                    //Move Down
+                    if (GUILayout.Button("Duplicate"))
+                    {
+                        var action = script.AddAction();
+                        selectedAction.CopyTo(action);
+                    }
                 }
-
-                //Move Down
-                if (GUILayout.Button("Move Down"))
-                {
-                    var temp = new List<BaseActions.Action>();
-                    script.GetActions(temp);
-
-                    var index = temp.IndexOf(selectedAction);
-                    script.RemoveAction(selectedAction);
-                    script.InsertAction(Mathf.Min(temp.Count - 1, index + 1), selectedAction);
-                }
-
                 EditorGUI.EndDisabledGroup();
             }
             EditorGUILayout.EndHorizontal();
@@ -1261,7 +1355,11 @@ namespace VRCAvatarActions
         {
             //Transitions
             action.fadeIn = EditorGUILayout.FloatField("Fade In", action.fadeIn);
-            action.fadeOut = EditorGUILayout.FloatField("Fade Out", action.fadeOut);
+            if(script.ActionsHaveExit())
+            {
+                action.hold = EditorGUILayout.FloatField("Hold", action.hold);
+                action.fadeOut = EditorGUILayout.FloatField("Fade Out", action.fadeOut);
+            }
 
             //Properties
             {
@@ -1288,7 +1386,7 @@ namespace VRCAvatarActions
                         {
                             //Add
                             if (GUILayout.Button("Add"))
-                                action.objectProperties.Add(new BaseActions.ObjectProperty());
+                                action.objectProperties.Add(new ObjectProperty());
                         }
                         EditorGUILayout.EndHorizontal();
 
@@ -1299,7 +1397,6 @@ namespace VRCAvatarActions
                             EditorGUILayout.BeginVertical(GUI.skin.box);
                             {
                                 //Header
-                                bool updated = false;
                                 EditorGUILayout.BeginHorizontal();
                                 {
                                     //Object Ref
@@ -1311,7 +1408,7 @@ namespace VRCAvatarActions
                                     }
 
                                     //Type
-                                    property.type = (BaseActions.ObjectProperty.Type)EditorGUILayout.EnumPopup(property.type);
+                                    property.type = (ObjectProperty.Type)EditorGUILayout.EnumPopup(property.type);
 
                                     //Delete
                                     if (GUILayout.Button("X", GUILayout.Width(32)))
@@ -1327,8 +1424,9 @@ namespace VRCAvatarActions
                                 {
                                     switch (property.type)
                                     {
-                                        case BaseActions.ObjectProperty.Type.MaterialSwap: MaterialSwapProperty(property); break;
-                                        case BaseActions.ObjectProperty.Type.BlendShape: BlendShapeProperty(property); break;
+                                        case ObjectProperty.Type.MaterialSwap: MaterialSwapProperty(property); break;
+                                        case ObjectProperty.Type.BlendShape: BlendShapeProperty(new ObjectProperty.BlendShape(property)); break;
+                                        case ObjectProperty.Type.PlayAudio: PlayAudioProperty(new ObjectProperty.PlayAudio(property)); break;
                                     }
                                 }
                             }
@@ -1342,7 +1440,7 @@ namespace VRCAvatarActions
                 EditorGUILayout.EndVertical();
             }
 
-            bool ObjectPropertyReferece(BaseActions.ObjectProperty property)
+            bool ObjectPropertyReferece(ObjectProperty property)
             {
                 //Object Ref
                 EditorGUI.BeginChangeCheck();
@@ -1368,7 +1466,7 @@ namespace VRCAvatarActions
                 }
                 return false;
             }
-            void MaterialSwapProperty(BaseActions.ObjectProperty property)
+            void MaterialSwapProperty(ObjectProperty property)
             {
                 //Get object materials
                 var mesh = property.objRef.GetComponent<Renderer>();
@@ -1401,7 +1499,7 @@ namespace VRCAvatarActions
                     }
                 }
             }
-            void BlendShapeProperty(BaseActions.ObjectProperty property)
+            void BlendShapeProperty(ObjectProperty.BlendShape property)
             {
                 //Get mesh
                 Mesh mesh = null;
@@ -1414,8 +1512,7 @@ namespace VRCAvatarActions
                 mesh = skinnedRenderer.sharedMesh;
 
                 //Setup data
-                if (property.values == null || property.values.Length != 2)
-                    property.values = new float[2];
+                property.Setup();
 
                 var popup = new string[mesh.blendShapeCount];
                 for (int i = 0; i < mesh.blendShapeCount; i++)
@@ -1425,11 +1522,11 @@ namespace VRCAvatarActions
                 EditorGUILayout.BeginHorizontal();
                 {
                     //Property
-                    property.values[0] = EditorGUILayout.Popup((int)property.values[0], popup);
+                    property.index = EditorGUILayout.Popup(property.index, popup);
 
                     //Value
                     EditorGUI.BeginChangeCheck();
-                    property.values[1] = EditorGUILayout.Slider(property.values[1], 0f, 100f);
+                    property.weight = EditorGUILayout.Slider(property.weight, 0f, 100f);
                     if(EditorGUI.EndChangeCheck())
                     {
                         //I'd like to preview the change, but preserving the value
@@ -1438,6 +1535,32 @@ namespace VRCAvatarActions
                     }
                 }
                 EditorGUILayout.EndHorizontal();
+            }
+            void PlayAudioProperty(ObjectProperty.PlayAudio property)
+            {
+                //Setup
+                property.Setup();
+
+                //Editor
+                //EditorGUILayout.BeginHorizontal();
+                {
+                    //Property
+                    EditorGUILayout.BeginHorizontal();
+                    {
+                        property.audioClip = (AudioClip)EditorGUILayout.ObjectField("Clip", property.audioClip, typeof(AudioClip), false);
+                        EditorGUILayout.TextField(property.audioClip != null ? $"{property.audioClip.length:N2}" : "", GUILayout.Width(64));
+                    }
+                    EditorGUILayout.EndHorizontal();
+                    property.volume = EditorGUILayout.Slider("Volume", property.volume, 0f, 1f);
+                    property.spatial = EditorGUILayout.Toggle("Spatial", property.spatial);
+                    EditorGUI.BeginDisabledGroup(!property.spatial);
+                    {
+                        property.near = EditorGUILayout.FloatField("Near", property.near);
+                        property.far = EditorGUILayout.FloatField("Far", property.far);
+                    }
+                    EditorGUI.EndDisabledGroup();
+                }
+                //EditorGUILayout.EndHorizontal();
             }
 
             //Animations
@@ -1448,20 +1571,28 @@ namespace VRCAvatarActions
                 if (action.foldoutAnimations)
                 {
                     //Action layer
-                    EditorGUILayout.LabelField("Action Layer");
-                    EditorGUI.indentLevel += 1;
-                    action.actionLayerAnimations.enter = DrawAnimationReference("Enter", action.actionLayerAnimations.enter, $"{action.name}_Action_Enter");
-                    action.actionLayerAnimations.exit = DrawAnimationReference("Exit", action.actionLayerAnimations.exit, $"{action.name}_Action_Exit");
-                    EditorGUILayout.HelpBox("Use for transfoming the humanoid skeleton.  You will need to use IK Overrides to disable IK control of body parts.", MessageType.Info);
-                    EditorGUI.indentLevel -= 1;
+                    if (script.CanUseLayer(BaseActions.AnimationLayer.Action))
+                    {
+                        EditorGUILayout.LabelField("Action Layer");
+                        EditorGUI.indentLevel += 1;
+                        action.actionLayerAnimations.enter = DrawAnimationReference("Enter", action.actionLayerAnimations.enter, $"{action.name}_Action_Enter");
+                        if (script.ActionsHaveExit())
+                            action.actionLayerAnimations.exit = DrawAnimationReference("Exit", action.actionLayerAnimations.exit, $"{action.name}_Action_Exit");
+                        EditorGUILayout.HelpBox("Use for transfoming the humanoid skeleton.  You will need to use IK Overrides to disable IK control of body parts.", MessageType.Info);
+                        EditorGUI.indentLevel -= 1;
+                    }
 
                     //FX Layer
-                    EditorGUILayout.LabelField("FX Layer");
-                    EditorGUI.indentLevel += 1;
-                    action.fxLayerAnimations.enter = DrawAnimationReference("Enter", action.fxLayerAnimations.enter, $"{action.name}_FX_Enter");
-                    action.fxLayerAnimations.exit = DrawAnimationReference("Exit", action.fxLayerAnimations.exit, $"{action.name}_FX_Exit");
-                    EditorGUILayout.HelpBox("Use for most everything else, including bones not part of the humanoid skeleton.", MessageType.Info);
-                    EditorGUI.indentLevel -= 1;
+                    if(script.CanUseLayer(BaseActions.AnimationLayer.FX))
+                    {
+                        EditorGUILayout.LabelField("FX Layer");
+                        EditorGUI.indentLevel += 1;
+                        action.fxLayerAnimations.enter = DrawAnimationReference("Enter", action.fxLayerAnimations.enter, $"{action.name}_FX_Enter");
+                        if (script.ActionsHaveExit())
+                            action.fxLayerAnimations.exit = DrawAnimationReference("Exit", action.fxLayerAnimations.exit, $"{action.name}_FX_Exit");
+                        EditorGUILayout.HelpBox("Use for most everything else, including bones not part of the humanoid skeleton.", MessageType.Info);
+                        EditorGUI.indentLevel -= 1;
+                    }
                 }
             }
             EditorGUI.indentLevel -= 1;
@@ -1523,6 +1654,22 @@ namespace VRCAvatarActions
                     {
                         EditorGUILayout.BeginHorizontal();
                         trigger.foldout = EditorGUILayout.Foldout(trigger.foldout, "Trigger");
+                        if(GUILayout.Button("Up", GUILayout.Width(48)))
+                        {
+                            if(triggerIter > 0)
+                            {
+                                action.triggers.RemoveAt(triggerIter);
+                                action.triggers.Insert(triggerIter - 1, trigger);
+                            }
+                        }
+                        if (GUILayout.Button("Down", GUILayout.Width(48)))
+                        {
+                            if (triggerIter < action.triggers.Count-1)
+                            {
+                                action.triggers.RemoveAt(triggerIter);
+                                action.triggers.Insert(triggerIter + 1, trigger);
+                            }
+                        }
                         if (GUILayout.Button("X", GUILayout.Width(32)))
                         {
                             action.triggers.RemoveAt(triggerIter);
@@ -1610,14 +1757,14 @@ namespace VRCAvatarActions
                     case BaseActions.ParameterEnum.VelocityZ:
                     case BaseActions.ParameterEnum.GestureRightWeight:
                     case BaseActions.ParameterEnum.GestureLeftWeight:
-                        trigger.value = EditorGUILayout.FloatField(1);
+                        trigger.value = EditorGUILayout.FloatField(trigger.value);
                         break;
                     case BaseActions.ParameterEnum.GestureLeft:
                     case BaseActions.ParameterEnum.GestureRight:
                         trigger.value = System.Convert.ToInt32(EditorGUILayout.EnumPopup((BaseActions.GestureEnum)(int)trigger.value));
                         break;
-                    case BaseActions.ParameterEnum.Visime:
-                        trigger.value = System.Convert.ToInt32(EditorGUILayout.EnumPopup((BaseActions.VisimeEnum)(int)trigger.value));
+                    case BaseActions.ParameterEnum.Viseme:
+                        trigger.value = System.Convert.ToInt32(EditorGUILayout.EnumPopup((BaseActions.VisemeEnum)(int)trigger.value));
                         break;
                     case BaseActions.ParameterEnum.TrackingType:
                         trigger.value = System.Convert.ToInt32(EditorGUILayout.EnumPopup((BaseActions.TrackingTypeEnum)(int)trigger.value));

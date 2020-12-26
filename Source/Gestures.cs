@@ -1,16 +1,14 @@
 ﻿#if UNITY_EDITOR
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEngine;
 
 namespace VRCAvatarActions
 {
-	[CreateAssetMenu(fileName = "Simple Gestures", menuName = "VRCAvatarActions/Other Actions/Simple Gestures")]
-	public class SimpleGestureActions : NonMenuActions
+    [CreateAssetMenu(fileName = "Gestures", menuName = "VRCAvatarActions/Other Actions/Gestures")]
+	public class Gestures : NonMenuActions
 	{
-		public GestureAction defaultAction;
-
         [System.Serializable]
         public class GestureAction : Action
         {
@@ -73,9 +71,9 @@ namespace VRCAvatarActions
         }
         public override Action AddAction()
         {
-            var action = new GestureAction();
-            actions.Add(action);
-            return action;
+            var result = new GestureAction();
+            actions.Add(result);
+            return result;
         }
         public override void RemoveAction(Action action)
         {
@@ -86,20 +84,21 @@ namespace VRCAvatarActions
             actions.Insert(index, action as GestureAction);
         }
 
+        public override bool CanUseLayer(BaseActions.AnimationLayer layer)
+        {
+            return layer == AnimationLayer.FX;
+        }
+        public override bool ActionsHaveExit()
+        {
+            return false;
+        }
+
         public enum GestureSide
         {
             Left,
             Right,
         }
         public GestureSide side;
-
-        public SimpleGestureActions()
-		{
-			var action = new GestureAction();
-			action.name = "Default";
-			action.gestureTable.neutral = true;
-			defaultAction = action;
-		}
 
         public override void Build(MenuActions.MenuAction parentAction)
         {
@@ -127,9 +126,9 @@ namespace VRCAvatarActions
                 return;
 
             //Build
-            BuildGestureLayer(layerType, layerName, layerActions, parentAction);
+            BuildLayer(layerType, layerName, layerActions, parentAction);
         }
-        void BuildGestureLayer(AnimationLayer layerType, string layerName, List<GestureAction> actions, MenuActions.MenuAction parentAction)
+        void BuildLayer(AnimationLayer layerType, string layerName, List<GestureAction> actions, MenuActions.MenuAction parentAction)
         {
             var controller = GetController(layerType);
 
@@ -147,8 +146,8 @@ namespace VRCAvatarActions
             layer.stateMachine.exitPosition = StatePosition(-1, 2);
 
             //Default state
-            var defaultAction = this.defaultAction;
-            var defaultState = layer.stateMachine.AddState("Default Gesture", StatePosition(0, 0));
+            AnimatorState defaultState = null;
+            GestureAction defaultAction = null;
             var unusedGestures = new List<GestureEnum>();
             unusedGestures.Add(GestureEnum.Neutral);
             unusedGestures.Add(GestureEnum.Fist);
@@ -158,13 +157,6 @@ namespace VRCAvatarActions
             unusedGestures.Add(GestureEnum.RockNRoll);
             unusedGestures.Add(GestureEnum.HandGun);
             unusedGestures.Add(GestureEnum.ThumbsUp);
-
-                //Animation Layer Weight
-                var layerWeight = defaultState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                layerWeight.goalWeight = 1;
-                layerWeight.layer = GetLayerIndex(controller, layer);
-                layerWeight.blendDuration = 0;
-                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
 
             //Build states
             int actionIter = 0;
@@ -210,7 +202,25 @@ namespace VRCAvatarActions
                         unusedGestures.Remove(gesture);
                     }
                 }
+
+                //Default
+                if(action.gestureTable.neutral)
+                {
+                    defaultState = state;
+                    defaultAction = action;
+                }
             }
+
+            //Default state
+            if(defaultState == null)
+                defaultState = layer.stateMachine.AddState("Neutral", StatePosition(0, 0));
+
+            //Animation Layer Weight
+            var layerWeight = defaultState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
+            layerWeight.goalWeight = 1;
+            layerWeight.layer = GetLayerIndex(controller, layer);
+            layerWeight.blendDuration = 0;
+            layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
 
             //Default transitions
             foreach (var gesture in unusedGestures)
@@ -235,34 +245,27 @@ namespace VRCAvatarActions
         }
     }
 
-    [CustomEditor(typeof(SimpleGestureActions))]
-    public class SimpleGestureActionsEditor : BaseActionsEditor
+    [CustomEditor(typeof(Gestures))]
+    public class GesturesEditor : BaseActionsEditor
     {
-        SimpleGestureActions gestureScript;
+        Gestures gestureScript;
 
         public override void Inspector_Header()
         {
-            gestureScript = target as SimpleGestureActions;
+            gestureScript = target as Gestures;
+            EditorGUILayout.HelpBox("Gestures - Simplified actions controlled by gestures.", MessageType.Info);
 
             //Default Action
             EditorGUILayout.BeginVertical(GUI.skin.box);
             {
                 //Side
-                gestureScript.side = (SimpleGestureActions.GestureSide)EditorGUILayout.EnumPopup("Side", gestureScript.side);
-
-                //Default
-                var action = gestureScript.defaultAction;
-                EditorGUILayout.LabelField("Default Gesture");
-                EditorGUI.indentLevel += 1;
-                action.fadeIn = EditorGUILayout.FloatField("Fade In", action.fadeIn);
-                action.fxLayerAnimations.enter = DrawAnimationReference("FX Layer", action.fxLayerAnimations.enter, "Gestures_FX_");
-                EditorGUI.indentLevel -= 1;
+                gestureScript.side = (Gestures.GestureSide)EditorGUILayout.EnumPopup("Side", gestureScript.side);
             }
             EditorGUILayout.EndVertical();
         }
         public override void Inspector_Action_Header(BaseActions.Action action)
         {
-            var gestureAction = (SimpleGestureActions.GestureAction)action;
+            var gestureAction = (Gestures.GestureAction)action;
 
             //Name
             action.name = EditorGUILayout.TextField("Name", action.name);
@@ -272,7 +275,7 @@ namespace VRCAvatarActions
             EditorGUI.indentLevel += 1;
             {
                 EditorGUILayout.LabelField("Gesture Type");
-                //DrawGestureToggle("Neutral", AvatarActionSet.Action.GestureEnum.Neutral);
+                DrawGestureToggle("Neutral", BaseActions.GestureEnum.Neutral);
                 DrawGestureToggle("Fist", BaseActions.GestureEnum.Fist);
                 DrawGestureToggle("Open Hand", BaseActions.GestureEnum.OpenHand);
                 DrawGestureToggle("Finger Point", BaseActions.GestureEnum.FingerPoint);
@@ -297,13 +300,6 @@ namespace VRCAvatarActions
             {
                 EditorGUILayout.HelpBox("No conditions currently selected.", MessageType.Warning);
             }
-
-            //Animation
-            action.fadeIn = EditorGUILayout.FloatField("Fade In", action.fadeIn);
-            action.fxLayerAnimations.enter = DrawAnimationReference("FX Layer", action.fxLayerAnimations.enter, "Gestures_FX");
-
-            //Default
-            //DrawInspector_Action(action, false);
         }
         bool CheckGestureTypeUsed(BaseActions.GestureEnum type)
         {
