@@ -7,7 +7,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 - Select the new item called "Menu".
 - In the inspector click "Add" to create a new action.
 	- Name - Give your action a name.
-	- Parameter - Specify a parameter to control this action.  For example... if I'm making a hat, just call it "Hat" or "Head".
+	- Parameter - Specify a parameter to control this action.  For example... if you're toggling a hat, just call it "Hat" or "Head".
 	- Object Properties
 		- Open the object properties and click "Add"
 		- Drag in an object you want to toggle.
