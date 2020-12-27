@@ -27,7 +27,6 @@ Unity script for creating avatar 3.0 content faster and easier.
 - **Viseme** - Actions tied directly to visemes.  These actions don't have exit states, as they quickly transition from one action to another.
 
 ## Menu Actions ##
-Menu actions
 - **Name** - Display name in expressions menu.
 - **Icon** - Display icon in expressions menu.
 - **Type** - Type of action.
