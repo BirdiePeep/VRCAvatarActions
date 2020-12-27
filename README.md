@@ -3,8 +3,8 @@ Unity script for creating avatar 3.0 content faster and easier.
 
 ## QUICK START
 
-- Begin by right clicking in the Assets higherarchy and select "Create/VRCAvatarActions/Menu Actions/Menu Actions".
-- Select the new item called "Menu Actions".
+- Begin by right clicking in the Assets higherarchy and select "Create/VRCAvatarActions/Menu Actions/Menu".
+- Select the new item called "Menu".
 - In the inspector click "Add" to create a new action.
     - **Name** - Display name in expressions menu.
     - **Icon** - Display icon in expressions menu.
@@ -15,6 +15,7 @@ Unity script for creating avatar 3.0 content faster and easier.
       - Sub-Menu - Goes to another AvatarActions object.
       - Pre-Existing - If a menu item has the same name, it won't destroy it.
     - **Fade in** - Time to fade in.
+    - **Hold** - Time to hold before checking for exit conditions.
     - **Fade out** -Time to fade out.
     - **Parameter** - Which parameter is associated with this action.
     - **Object Properties** - Specify properties to modify when this control is active, without having to make an animation.
@@ -27,8 +28,14 @@ Unity script for creating avatar 3.0 content faster and easier.
 		
 ## BUILDING
 
-- Select your avatar and add a script called "Avatar Actions".
-- Drag your Menu Actions object into the Menu Actions field.
+- Create a new game object in your scene and add the "Avatar Actions" script.
+- Drag your Menu object into the Menu Actions field.
 - Click the "Build Avatar Data" button.
 
 Now you are ready to upload your avatar!
+
+## ScriptableObject Types
+- **Menu** - A set of actions tied to the avatar's expression menu.  Create toggles, buttons, sub-menus, etc.
+- **Basic** - Actions with no default trigger conditions.  They are either always running or can have a custom set of triggers.
+- **Gestures** - Actions tied directly to gestures.  These actions don't have exit states, as they quickly transition from one action to another.
+- **Viseme** - Actions tied directly to visemes.  These actions don't have exit states, as they quickly transition from one action to another.
