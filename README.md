@@ -38,7 +38,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 - **Fade in** - Time to fade in.
 - **Hold** - Time to hold before checking for exit conditions.
 - **Fade out** -Time to fade out.
-- **Parameter** - Which parameter is associated with this action. Actions that share a parameter name are grouped together in the animation controller.
+- **Parameter** - Which parameter used to control this action. You can share parameters between actions and in most cases this is prefered.  VRChat limits avatars to 16 total parameters.  When actions share parameters only one can be active at a time.
 - **Object Properties** - Simple actions you want to perform when this action is enabled.  (Toggle objects, swap materials, play audio, etc...)
 - **Animations** - Animations to play when this control is active.
 	- Enter - The base animation, it plays at the start.
