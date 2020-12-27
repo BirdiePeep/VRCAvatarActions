@@ -11,18 +11,18 @@ Unity script for creating avatar 3.0 content faster and easier.
     - **Type** - Type of action.
       - Toggle - Toggle on/off.
       - Button - Press and release.
-      - Slider - Radial slider, plays an animation at a normalized time based on the slider value.
-      - Sub-Menu - Goes to another AvatarActions object.
-      - Pre-Existing - If a menu item has the same name, it won't destroy it.
+      - Slider - Radial menu.  Plays an animation at a position based on the slider's value.
+      - Sub-Menu - Opens a new menu.
+      - Pre-Existing (Advanced) - Preserves a menu item that already exists in the VRCExpressionsMenu object.
     - **Fade in** - Time to fade in.
     - **Hold** - Time to hold before checking for exit conditions.
     - **Fade out** -Time to fade out.
-    - **Parameter** - Which parameter is associated with this action.
-    - **Object Properties** - Specify properties to modify when this control is active, without having to make an animation.
+    - **Parameter** - Which parameter is associated with this action. **(REQUIRED)**
+    - **Object Properties** - Simple actions you want to perform when this action is enabled.  Toggle objects, swap materials, play audio, etc...
     - **Animations** - Animations to play when this control is active.
       - Enter - The base animation, it plays at the start.
       - Exit - An optional animtion to play when exiting.
-    - **IK Overrides** - Informs the avatar to disable certain IK controls over the avatar while the control is active.
+    - **IK Overrides (Advanced)** - Informs the avatar to disable certain IK controls over the avatar while the control is active.
     - **Triggers (Advanced)** - Additional enter or exit conditions for this action.
     - **Sub-Actions (Experimental)** - Supply any number of non-menu action sets.  These actions will only activate if this control is also active.
 		
