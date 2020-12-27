@@ -37,5 +37,5 @@ Now you are ready to upload your avatar!
 ## ScriptableObject Types
 - **Menu** - A set of actions tied to the avatar's expression menu.  Create toggles, buttons, sub-menus, etc.
 - **Basic** - Actions with no default trigger conditions.  They are either always running or can have a custom set of triggers.
-- **Gestures** - Actions tied directly to gestures.  These actions don't have exit states, as they quickly transition from one action to another.
+- **Gestures** - Actions tied directly to gestures.  These actions don't have exit states, as they quickly transition from one action to another. (Examples: Idle animations, AFK animations, etc...)
 - **Viseme** - Actions tied directly to visemes.  These actions don't have exit states, as they quickly transition from one action to another.
