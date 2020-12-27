@@ -20,7 +20,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 - Click the "Build Avatar Data" button.
 - It's done! Now you are ready to upload your avatar.
 
-## ScriptableObject Types
+## Object Types
 - **Menu** - A set of actions tied to the avatar's expression menu.  (Toggles, buttons, sub-menus, etc...).
 - **Basic** - Actions with no default trigger conditions.  They are either always running or can have a custom set of triggers. (Idles, AFKs, etc...)
 - **Gestures** - Actions tied directly to gestures.  These actions don't have exit states, as they quickly transition from one action to another.
