@@ -18,7 +18,7 @@ Unity script for creating avatar 3.0 content faster and easier.
     - **Hold** - Time to hold before checking for exit conditions.
     - **Fade out** -Time to fade out.
     - **Parameter** - Which parameter is associated with this action. **(REQUIRED)**
-    - **Object Properties** - Simple actions you want to perform when this action is enabled.  Toggle objects, swap materials, play audio, etc...
+    - **Object Properties** - Simple actions you want to perform when this action is enabled.  (Toggle objects, swap materials, play audio, etc...)
     - **Animations** - Animations to play when this control is active.
       - Enter - The base animation, it plays at the start.
       - Exit - An optional animtion to play when exiting.
@@ -35,7 +35,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 Now you are ready to upload your avatar!
 
 ## ScriptableObject Types
-- **Menu** - A set of actions tied to the avatar's expression menu.  Create toggles, buttons, sub-menus, etc.
-- **Basic** - Actions with no default trigger conditions.  They are either always running or can have a custom set of triggers.
-- **Gestures** - Actions tied directly to gestures.  These actions don't have exit states, as they quickly transition from one action to another. (Examples: Idle animations, AFK animations, etc...)
+- **Menu** - A set of actions tied to the avatar's expression menu.  (Toggles, buttons, sub-menus, etc...).
+- **Basic** - Actions with no default trigger conditions.  They are either always running or can have a custom set of triggers. (Idles, AFKs, etc...)
+- **Gestures** - Actions tied directly to gestures.  These actions don't have exit states, as they quickly transition from one action to another.
 - **Viseme** - Actions tied directly to visemes.  These actions don't have exit states, as they quickly transition from one action to another.
