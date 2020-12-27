@@ -6,12 +6,12 @@ Unity script for creating avatar 3.0 content faster and easier.
 - Begin by right clicking in the Assets higherarchy and select "Create/VRCAvatarActions/Menu Actions/Menu".
 - Select the new item called "Menu".
 - In the inspector click "Add" to create a new action.
-    - Name - Give your action a name.
-    - Type - What kind of menu item, toggle is best used most often.
-    - Parameter - Specify a parameter to control this animation.  For example... if I'm making a hat, just call it "Hat" or "Head".
-    - Object Properties
-    	- Open the object properties and click "Add"
-	- Drag in an object you want to toggle.
+	- Name - Give your action a name.
+	- Type - What kind of menu item, toggle is best used most often.
+	- Parameter - Specify a parameter to control this animation.  For example... if I'm making a hat, just call it "Hat" or "Head".
+	- Object Properties
+		- Open the object properties and click "Add"
+		- Drag in an object you want to toggle.
 		
 ## Quick Start - Build
 
