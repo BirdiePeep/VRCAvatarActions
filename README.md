@@ -16,6 +16,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 
 - Rightclick in your scene and select "Create Empty".
 - Select the new game object and in the inspector click "Add Component", selecting "Avatar Actions".
+- Drag your avatar object into the Avatar field.
 - Drag your Menu object into the Menu Actions field.
 - Click the "Build Avatar Data" button.
 - It's done! Now you are ready to upload your avatar.
