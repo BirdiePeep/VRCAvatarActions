@@ -218,6 +218,7 @@ namespace VRCAvatarActions
             //Default state
             if(defaultState == null)
                 defaultState = layer.stateMachine.AddState("Default", StatePosition(0, 0));
+            layer.stateMachine.defaultState = defaultState;
 
             //Animation Layer Weight
             var layerWeight = defaultState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();

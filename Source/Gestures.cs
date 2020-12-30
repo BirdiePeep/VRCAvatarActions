@@ -214,6 +214,7 @@ namespace VRCAvatarActions
             //Default state
             if(defaultState == null)
                 defaultState = layer.stateMachine.AddState("Neutral", StatePosition(0, 0));
+            layer.stateMachine.defaultState = defaultState;
 
             //Animation Layer Weight
             var layerWeight = defaultState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
@@ -229,7 +230,7 @@ namespace VRCAvatarActions
                 var transition = layer.stateMachine.AddAnyStateTransition(defaultState);
                 transition.hasExitTime = false;
                 transition.exitTime = 0;
-                transition.duration = defaultAction.fadeIn;
+                transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
                 transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, paramName);
             }
 
@@ -239,7 +240,7 @@ namespace VRCAvatarActions
                 var transition = layer.stateMachine.AddAnyStateTransition(defaultState);
                 transition.hasExitTime = false;
                 transition.exitTime = 0;
-                transition.duration = defaultAction.fadeIn;
+                transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
                 transition.AddCondition(AnimatorConditionMode.NotEqual, parentAction.controlValue, parentAction.parameter);
             }
         }
