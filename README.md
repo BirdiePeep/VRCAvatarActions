@@ -1,6 +1,12 @@
 # VRCAvatarActions
 Unity script for creating avatar 3.0 content faster and easier.
 
+## Quick Start - Install
+
+- Download the package on git.  Click Code, Download as Zip.
+- Extract the VRCAvatarActions folder.
+- Drag the VRCAvatarActions folder into your Unity project.
+
 ## Quick Start - Create a Menu
 
 - Begin by right clicking in the Assets higherarchy and select "Create/VRCAvatarActions/Menu Actions/Menu".
