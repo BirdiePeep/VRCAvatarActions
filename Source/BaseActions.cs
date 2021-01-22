@@ -85,6 +85,11 @@ namespace VRCAvatarActions
             Action,
             FX,
         }
+        public enum OnOffEnum
+        {
+            On = 1,
+            Off = 0
+        }
 
         [System.Serializable]
         public class Action
@@ -132,6 +137,8 @@ namespace VRCAvatarActions
                 {
                     if (objectProperties.Count > 0)
                         return true;
+                    if (parameterDrivers.Count > 0)
+                        return true;
                 }
                 return false;
             }
@@ -148,6 +155,37 @@ namespace VRCAvatarActions
 
             //Object Properties
             public List<ObjectProperty> objectProperties = new List<ObjectProperty>();
+
+            //Drive Parameters
+            [System.Serializable]
+            public class ParameterDriver
+            {
+                public enum Type
+                {
+                    RawValue = 4461,
+                    MenuToggle = 3632,
+                    MenuRandom = 9065,
+                }
+
+                public ParameterDriver() { }
+                public ParameterDriver(ParameterDriver source)
+                {
+                    this.type = source.type;
+                    this.name = source.name;
+                    this.value = source.value;
+                }
+
+                public Type type = Type.RawValue;
+                public string name;
+                public float value = 1f;
+
+                public VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType changeType = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set;
+                public float valueMin = 0;
+                public float valueMax = 1;
+                public float chance = 0.5f;
+                public bool isZeroValid = true;
+            }
+            public List<ParameterDriver> parameterDrivers = new List<ParameterDriver>();
 
             //Triggers
             [System.Serializable]
@@ -297,7 +335,7 @@ namespace VRCAvatarActions
                         triggers.Add(trigger);
                 }
 
-                AnimatorConditionMode controlTrigger = (triggerType != Action.Trigger.Type.Exit) ? AnimatorConditionMode.Equals : AnimatorConditionMode.NotEqual;
+                bool controlEquals = (triggerType != Action.Trigger.Type.Exit);
 
                 //Add triggers
                 if (triggers.Count > 0)
@@ -313,14 +351,14 @@ namespace VRCAvatarActions
                         var transition = lastState.AddTransition(state);
                         transition.hasExitTime = false;
                         transition.duration = transitionTime;
-                        this.AddCondition(transition, controlTrigger);
+                        this.AddCondition(transition, controlEquals);
 
                         //Conditions
                         AddTriggerConditions(controller, transition, trigger.conditions);
 
                         //Parent Conditions - Enter
                         if (triggerType == Action.Trigger.Type.Enter && parentAction != null)
-                            parentAction.AddCondition(transition, controlTrigger);
+                            parentAction.AddCondition(transition, controlEquals);
 
                         //Finalize
                         Finalize(transition);
@@ -334,11 +372,11 @@ namespace VRCAvatarActions
                         var transition = lastState.AddTransition(state);
                         transition.hasExitTime = false;
                         transition.duration = transitionTime;
-                        this.AddCondition(transition, controlTrigger);
+                        this.AddCondition(transition, controlEquals);
 
                         //Parent Conditions
                         if (parentAction != null)
-                            parentAction.AddCondition(transition, controlTrigger);
+                            parentAction.AddCondition(transition, controlEquals);
 
                         //Finalize
                         Finalize(transition);
@@ -349,7 +387,7 @@ namespace VRCAvatarActions
                         var transition = lastState.AddTransition(state);
                         transition.hasExitTime = false;
                         transition.duration = transitionTime;
-                        this.AddCondition(transition, controlTrigger);
+                        this.AddCondition(transition, controlEquals);
 
                         //Finalize
                         Finalize(transition);
@@ -362,7 +400,7 @@ namespace VRCAvatarActions
                     var transition = lastState.AddTransition(state);
                     transition.hasExitTime = false;
                     transition.duration = transitionTime;
-                    parentAction.AddCondition(transition, controlTrigger);
+                    parentAction.AddCondition(transition, controlEquals);
                 }
 
                 void Finalize(AnimatorStateTransition transition)
@@ -371,7 +409,7 @@ namespace VRCAvatarActions
                         transition.AddCondition(AnimatorConditionMode.If, 1, "True");
                 }
             }
-            public virtual void AddCondition(AnimatorStateTransition transition, AnimatorConditionMode mode)
+            public virtual void AddCondition(AnimatorStateTransition transition, bool equals)
             {
                 //Nothing
             }
@@ -383,6 +421,7 @@ namespace VRCAvatarActions
             public bool foldoutToggleObjects = false;
             public bool foldoutMaterialSwaps = false;
             public bool foldoutAnimations = false;
+            public bool foldoutParameterDrivers = false;
 
             UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter = true)
             {
@@ -517,6 +556,11 @@ namespace VRCAvatarActions
                 foreach (var prop in this.objectProperties)
                     clone.objectProperties.Add(new ObjectProperty(prop));
 
+                //Parameter drivers
+                clone.parameterDrivers.Clear();
+                foreach (var driver in this.parameterDrivers)
+                    clone.parameterDrivers.Add(new ParameterDriver(driver));
+
                 //Triggers
                 clone.triggers.Clear();
                 foreach (var trigger in this.triggers)
@@ -597,6 +641,7 @@ namespace VRCAvatarActions
         }
         protected static bool BuildFailed = false;
         protected static Dictionary<string, AnimationClip> GeneratedClips = new Dictionary<string, AnimationClip>();
+        public static Dictionary<string, List<MenuActions.MenuAction>> ParameterToMenuActions = new Dictionary<string, List<MenuActions.MenuAction>>();
 
         public static void BuildAvatarData(AvatarDescriptor desc, AvatarActions actionsDesc)
         {
@@ -945,6 +990,9 @@ namespace VRCAvatarActions
                     //Tracking
                     SetupTracking(action, state, TrackingType.Animation);
 
+                    //Parameter Drivers
+                    BuildParameterDrivers(action, state);
+
                     //Store
                     lastState = state;
                 }
@@ -1156,6 +1204,62 @@ namespace VRCAvatarActions
             //Default true
             if (transition.conditions.Length == 0)
                 transition.AddCondition(AnimatorConditionMode.If, 1f, "True");
+        }
+        protected static void BuildParameterDrivers(BaseActions.Action action, AnimatorState state)
+        {
+            var driverBehaviour = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+            driverBehaviour.localOnly = true;
+            foreach(var driver in action.parameterDrivers)
+            {
+                if (string.IsNullOrEmpty(driver.name))
+                    continue;
+
+                //Build param
+                var param = new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter();
+                if (driver.type == Action.ParameterDriver.Type.RawValue)
+                {
+                    param.name = driver.name;
+                    param.value = driver.value;
+                    param.type = driver.changeType;
+                    param.valueMin = driver.valueMin;
+                    param.valueMax = driver.valueMax;
+                    param.chance = driver.chance;
+                }
+                else if(driver.type == Action.ParameterDriver.Type.MenuToggle)
+                {
+                    //Search for menu action
+                    var drivenAction = ActionsDescriptor.menuActions.FindMenuAction(driver.name);
+                    if(drivenAction == null || drivenAction.menuType != MenuActions.MenuAction.MenuType.Toggle)
+                    {
+                        BuildFailed = true;
+                        EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find menu toggle named '{driver.name}' for a parameter driver.  Build Failed.", "Okay");
+                        return;
+                    }
+                    param.name = drivenAction.parameter;
+                    param.value = driver.value == 0 ? 0 : drivenAction.controlValue;
+                }
+                else if(driver.type == Action.ParameterDriver.Type.MenuRandom)
+                {
+                    //Find max values    
+                    List<MenuActions.MenuAction> list;
+                    if(ParameterToMenuActions.TryGetValue(driver.name, out list))
+                    {
+                        param.name = driver.name;
+                        param.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random;
+                        param.value = 0;
+                        param.valueMin = driver.isZeroValid ? 1 : 0;
+                        param.valueMax = list.Count;
+                        param.chance = 0.5f;
+                    }
+                    else
+                    {
+                        BuildFailed = true;
+                        EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find any menu actions driven by parameter '{driver.name} for a parameter driver'.  Build Failed.", "Okay");
+                        return;
+                    }
+                }
+                driverBehaviour.parameters.Add(param);
+            }
         }
 
         //Helpers
@@ -1593,6 +1697,73 @@ namespace VRCAvatarActions
                         EditorGUILayout.HelpBox("Use for most everything else, including bones not part of the humanoid skeleton.", MessageType.Info);
                         EditorGUI.indentLevel -= 1;
                     }
+                }
+            }
+            EditorGUI.indentLevel -= 1;
+            EditorGUILayout.EndVertical();
+
+            //Parameter Drivers
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUI.indentLevel += 1;
+            {
+                action.foldoutParameterDrivers = EditorGUILayout.Foldout(action.foldoutParameterDrivers, Title("Parameter Drivers", action.parameterDrivers.Count > 0));
+                if (action.foldoutParameterDrivers)
+                {
+                    //Add
+                    if (GUILayout.Button("Add"))
+                    {
+                        action.parameterDrivers.Add(new BaseActions.Action.ParameterDriver());
+                    }
+
+                    //Drivers
+                    for (int i = 0; i < action.parameterDrivers.Count; i++)
+                    {
+                        var parameter = action.parameterDrivers[i];
+                        EditorGUILayout.BeginVertical(GUI.skin.box);
+                        EditorGUILayout.BeginHorizontal();
+                        {
+                            parameter.type = (BaseActions.Action.ParameterDriver.Type)EditorGUILayout.EnumPopup("Type", parameter.type);
+                            if(GUILayout.Button("X", GUILayout.Width(32)))
+                            {
+                                action.parameterDrivers.RemoveAt(i);
+                                i--;
+                            }
+                        }
+                        EditorGUILayout.EndHorizontal();
+                        if (parameter.type == BaseActions.Action.ParameterDriver.Type.RawValue)
+                        {
+                            parameter.name = DrawParameterDropDown(parameter.name, "Parameter");
+                            EditorGUILayout.BeginHorizontal();
+                            {
+                                //EditorGUILayout.LabelField("Value");
+                                parameter.changeType = (VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType)EditorGUILayout.EnumPopup("Value", parameter.changeType);
+                                if (parameter.changeType == VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random)
+                                {
+                                    parameter.valueMin = EditorGUILayout.FloatField(parameter.valueMin, GUILayout.MaxWidth(98));
+                                    parameter.valueMax = EditorGUILayout.FloatField(parameter.valueMax, GUILayout.MaxWidth(98));
+                                }
+                                else
+                                    parameter.value = EditorGUILayout.FloatField(parameter.value, GUILayout.MaxWidth(200));
+                            }
+                            EditorGUILayout.EndHorizontal();
+                        }
+                        else if(parameter.type == BaseActions.Action.ParameterDriver.Type.MenuToggle)
+                        {
+                            parameter.name = EditorGUILayout.TextField("Menu Action", parameter.name);
+                            var value = parameter.value == 0 ? BaseActions.OnOffEnum.Off : BaseActions.OnOffEnum.On;
+                            parameter.value = System.Convert.ToInt32(EditorGUILayout.EnumPopup("Value", value));
+                        }
+                        else if(parameter.type == BaseActions.Action.ParameterDriver.Type.MenuRandom)
+                        {
+                            parameter.name = DrawParameterDropDown(parameter.name, "Parameter");
+                            parameter.isZeroValid = EditorGUILayout.Toggle("Is Zero Valid", parameter.isZeroValid);
+                        }
+                        EditorGUILayout.EndVertical();
+                    }
+
+                    EditorGUILayout.HelpBox("Raw Value - Set a parameter to a specific value.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Menu Toggle - Toggles a menu action by name.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Menu Random - Enables a random menu action driven by this parameter.", MessageType.Info);
                 }
             }
             EditorGUI.indentLevel -= 1;

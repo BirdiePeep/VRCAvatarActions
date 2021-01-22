@@ -6,6 +6,7 @@ using UnityEditor.Animations;
 using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace VRCAvatarActions
 {
@@ -86,15 +87,49 @@ namespace VRCAvatarActions
             {
                 return parameter;
             }
-            public override void AddCondition(AnimatorStateTransition transition, AnimatorConditionMode mode)
+            public override void AddCondition(AnimatorStateTransition transition, bool equals)
             {
                 if (string.IsNullOrEmpty(this.parameter))
                     return;
+
+                //Is parameter bool?
+                AnimatorConditionMode mode;
+                var param = AvatarDescriptor.expressionParameters.FindParameter(this.parameter);
+                if(param.valueType == ExpressionParameters.ValueType.Bool)
+                    mode = equals ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot;
+                else if(param.valueType == ExpressionParameters.ValueType.Int)
+                    mode = equals ? AnimatorConditionMode.Equals : AnimatorConditionMode.NotEqual;
+                else
+                {
+                    BuildFailed = true;
+                    EditorUtility.DisplayDialog("Build Error", "Parameter value type is not as expected.", "Okay");
+                    return;
+                }
+
+                //Set
                 transition.AddCondition(mode, this.controlValue, this.parameter);
             }
         }
         public List<MenuAction> actions = new List<MenuAction>();
 
+        public MenuAction FindMenuAction(string name)
+        {
+            foreach(var action in actions)
+            {
+                if (action.name == name)
+                    return action;
+            }
+            foreach(var action in actions)
+            {
+                if(action.menuType == MenuAction.MenuType.SubMenu && action.subMenu != null)
+                {
+                    var result = action.subMenu.FindMenuAction(name);
+                    if (result != null)
+                        return result;
+                }
+            }
+            return null;
+        }
         public override void GetActions(List<Action> output)
         {
             foreach (var action in actions)
@@ -234,16 +269,27 @@ namespace VRCAvatarActions
                 return true;
             }
 
-            //Check parameter count
-            if (AllParameters.Count > ExpressionParameters.MAX_PARAMETERS)
+            //Add existing parameters
+            if(parametersObject.parameters != null)
             {
-                BuildFailed = true;
-                EditorUtility.DisplayDialog("Build Error", $"Unable to build VRCExpressionParameters. Found more then {ExpressionParameters.MAX_PARAMETERS} parameters", "Okay");
-                return;
+                //Retain ignored parameters
+                foreach (var param in parametersObject.parameters)
+                {
+                    if (ActionsDescriptor.ignoreParameters.Contains(param.name))
+                        AllParameters.Add(param);
+                }
+
+                //Check parameter count
+                if (parametersObject.CalcTotalCost() > VRCExpressionParameters.MAX_PARAMETER_COST)
+                {
+                    BuildFailed = true;
+                    EditorUtility.DisplayDialog("Build Error", $"Unable to build VRCExpressionParameters. Too many parameters defined.", "Okay");
+                    return;
+                }
             }
 
             //Build
-            parametersObject.parameters = new ExpressionParameters.Parameter[ExpressionParameters.MAX_PARAMETERS];
+            parametersObject.parameters = new ExpressionParameters.Parameter[AllParameters.Count];
             for (int i = 0; i < AllParameters.Count; i++)
                 parametersObject.parameters[i] = AllParameters[i];
 
@@ -254,21 +300,29 @@ namespace VRCAvatarActions
         static void BuildActionValues(List<MenuAction> sourceActions)
         {
             var parametersObject = AvatarDescriptor.expressionParameters;
+            ParameterToMenuActions.Clear();
             foreach (var parameter in parametersObject.parameters)
             {
                 if (parameter == null || string.IsNullOrEmpty(parameter.name))
                     continue;
 
                 //Find all actions
+                List<MenuAction> actions = new List<MenuAction>();
                 int actionCount = 1;
                 foreach (var action in sourceActions)
                 {
                     if (action.parameter == parameter.name)
                     {
+                        actions.Add(action);
                         action.controlValue = actionCount;
                         actionCount += 1;
                     }
                 }
+                ParameterToMenuActions.Add(parameter.name, actions);
+
+                //Modify to bool
+                if (actions.Count == 1)
+                    parameter.valueType = ExpressionParameters.ValueType.Bool;
             }
         }
         static void BuildExpressionsMenu(MenuActions rootMenu)
@@ -414,7 +468,7 @@ namespace VRCAvatarActions
                     continue;
 
                 //Parameter
-                AddParameter(controller, parameter.name, AnimatorControllerParameterType.Int, 0);
+                AddParameter(controller, parameter.name, parameter.valueType == ExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool : AnimatorControllerParameterType.Int, 0);
 
                 //Build
                 if(layerType == AnimationLayer.Action)
