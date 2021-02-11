@@ -322,7 +322,13 @@ namespace VRCAvatarActions
 
                 //Modify to bool
                 if (actions.Count == 1)
+                {
                     parameter.valueType = ExpressionParameters.ValueType.Bool;
+
+                    //Save
+                    EditorUtility.SetDirty(parametersObject);
+                    AssetDatabase.SaveAssets();
+                }
             }
         }
         static void BuildExpressionsMenu(MenuActions rootMenu)

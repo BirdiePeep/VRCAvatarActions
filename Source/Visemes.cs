@@ -196,6 +196,7 @@ namespace VRCAvatarActions
                         transition.hasExitTime = false;
                         transition.exitTime = 0;
                         transition.duration = action.fadeIn;
+                        transition.canTransitionToSelf = false;
                         transition.AddCondition(AnimatorConditionMode.Equals, (int)visime, "Viseme");
 
                         //Parent
@@ -235,6 +236,7 @@ namespace VRCAvatarActions
                 transition.hasExitTime = false;
                 transition.exitTime = 0;
                 transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
+                transition.canTransitionToSelf = false;
                 transition.AddCondition(AnimatorConditionMode.Equals, (int)visime, "Viseme");
             }
 
@@ -245,6 +247,7 @@ namespace VRCAvatarActions
                 transition.hasExitTime = false;
                 transition.exitTime = 0;
                 transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
+                transition.canTransitionToSelf = false;
                 transition.AddCondition(AnimatorConditionMode.NotEqual, parentAction.controlValue, parentAction.parameter);
             }
         }
