@@ -50,6 +50,7 @@ Unity script for creating avatar 3.0 content faster and easier.
 - **Animations** - Animations to play when this control is active.
 	- Enter - The base animation, it plays at the start.
 	- Exit - An optional animtion to play when exiting.
+- **Parameter Drivers (Advanced)** - Modify parameters or menu toggles when this control is active.
 - **IK Overrides (Advanced)** - Informs the avatar to disable certain IK controls over the avatar while the control is active.
 - **Triggers (Advanced)** - Additional enter or exit conditions for this action.
 - **Sub-Actions (Experimental)** - Supply any number of non-menu action sets.  These actions will only activate if this control is also active.
