@@ -321,7 +321,7 @@ namespace VRCAvatarActions
                 ParameterToMenuActions.Add(parameter.name, actions);
 
                 //Modify to bool
-                if (actions.Count == 1)
+                if (actions.Count == 1 && (actions[0].menuType == MenuAction.MenuType.Toggle || actions[0].menuType == MenuAction.MenuType.Button))
                 {
                     parameter.valueType = ExpressionParameters.ValueType.Bool;
 
@@ -466,6 +466,8 @@ namespace VRCAvatarActions
                         continue;
                     if (!action.NeedsControlLayer())
                         continue;
+                    if (action.menuType == MenuAction.MenuType.Slider)
+                        continue;
                     if (!action.GetAnimation(layerType, true))
                         continue;
                     layerActions.Add(action);
@@ -495,7 +497,7 @@ namespace VRCAvatarActions
         {
             var controller = GetController(layerType);
 
-            //Find all option actions
+            //Find all slider actions
             var layerActions = new List<MenuAction>();
             foreach (var actionIter in sourceActions)
             {
