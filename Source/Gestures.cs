@@ -97,6 +97,7 @@ namespace VRCAvatarActions
         {
             Left,
             Right,
+            Both,
         }
         public GestureSide side;
 
@@ -133,8 +134,10 @@ namespace VRCAvatarActions
             var controller = GetController(layerType);
 
             //Add parameter
-            string paramName = this.side == GestureSide.Left ? "GestureLeft" : "GestureRight";
-            AddParameter(controller, paramName, AnimatorControllerParameterType.Int, 0);
+            if(side == GestureSide.Left || side == GestureSide.Both)
+                AddParameter(controller, "GestureLeft", AnimatorControllerParameterType.Int, 0);
+            if(side == GestureSide.Right || side == GestureSide.Both)
+                AddParameter(controller, "GestureRight", AnimatorControllerParameterType.Int, 0);
 
             //Prepare layer
             var layer = GetControllerLayer(controller, layerName);
@@ -185,22 +188,26 @@ namespace VRCAvatarActions
                 AddGestureCondition(GestureEnum.ThumbsUp);
                 void AddGestureCondition(BaseActions.GestureEnum gesture)
                 {
-                    if (action.gestureTable.GetValue(gesture))
-                    {
-                        //Transition
-                        var transition = layer.stateMachine.AddAnyStateTransition(state);
-                        transition.hasExitTime = false;
-                        transition.exitTime = 0;
-                        transition.duration = action.fadeIn;
-                        transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, paramName);
+                    if (!action.gestureTable.GetValue(gesture))
+                        return;
 
-                        //Parent
-                        if(parentAction != null)
-                            transition.AddCondition(AnimatorConditionMode.Equals, parentAction.controlValue, parentAction.parameter);
+                    //Transition
+                    var transition = layer.stateMachine.AddAnyStateTransition(state);
+                    transition.hasExitTime = false;
+                    transition.exitTime = 0;
+                    transition.duration = action.fadeIn;
 
-                        //Cleanup
-                        unusedGestures.Remove(gesture);
-                    }
+                    if (side == GestureSide.Left || side == GestureSide.Both)
+                        transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, "GestureLeft");
+                    if (side == GestureSide.Right || side == GestureSide.Both)
+                        transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, "GestureRight");
+
+                    //Parent
+                    if (parentAction != null && gesture != GestureEnum.Neutral)
+                        parentAction.AddCondition(transition, true);
+
+                    //Cleanup
+                    unusedGestures.Remove(gesture);
                 }
 
                 //Default
@@ -231,7 +238,11 @@ namespace VRCAvatarActions
                 transition.hasExitTime = false;
                 transition.exitTime = 0;
                 transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
-                transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, paramName);
+
+                if (side == GestureSide.Left || side == GestureSide.Both)
+                    transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, "GestureLeft");
+                if (side == GestureSide.Right || side == GestureSide.Both)
+                    transition.AddCondition(AnimatorConditionMode.Equals, (int)gesture, "GestureRight");
             }
 
             //Parent
@@ -241,7 +252,8 @@ namespace VRCAvatarActions
                 transition.hasExitTime = false;
                 transition.exitTime = 0;
                 transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
-                transition.AddCondition(AnimatorConditionMode.NotEqual, parentAction.controlValue, parentAction.parameter);
+
+                parentAction.AddCondition(transition, false);
             }
         }
     }

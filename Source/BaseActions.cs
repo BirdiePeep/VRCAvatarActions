@@ -9,6 +9,7 @@ using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionPar
 using TrackingType = VRC.SDKBase.VRC_AnimatorTrackingControl.TrackingType;
 using VRC.SDK3.Avatars.Components;
 using System;
+using System.Linq;
 
 namespace VRCAvatarActions
 {
@@ -752,9 +753,15 @@ namespace VRCAvatarActions
                         System.IO.File.Delete(file);
                 }
             }*/
+
+            //Parameters
+            InitExpressionParameters();
         }
         public static void BuildMain()
         {
+            //Build parameters
+
+
             //Build menu
             if (ActionsDescriptor.menuActions != null)
             {
@@ -782,7 +789,75 @@ namespace VRCAvatarActions
 
             //Save
             EditorUtility.SetDirty(AvatarDescriptor);
+            EditorUtility.SetDirty(AvatarDescriptor.expressionsMenu);
+
+            //Save Parameters
+            {
+                AvatarDescriptor.expressionParameters.parameters = BuildParameters.ToArray();
+
+                //Check parameter count
+                var parametersObject = AvatarDescriptor.expressionParameters;
+                if (parametersObject.CalcTotalCost() > ExpressionParameters.MAX_PARAMETER_COST)
+                {
+                    BuildFailed = true;
+                    EditorUtility.DisplayDialog("Build Error", $"Unable to build VRCExpressionParameters. Too many parameters defined.", "Okay");
+                    return;
+                }
+
+                EditorUtility.SetDirty(AvatarDescriptor.expressionParameters);
+            }
+
+            //Save prefab
             AssetDatabase.SaveAssets();
+        }
+
+        //Parameters
+        static protected List<ExpressionParameters.Parameter> BuildParameters = new List<ExpressionParameters.Parameter>();
+        static void InitExpressionParameters()
+        {
+            //Check if parameter object exists
+            var parametersObject = AvatarDescriptor.expressionParameters;
+            if (AvatarDescriptor.expressionParameters == null || !AvatarDescriptor.customExpressions)
+            {
+                parametersObject = ScriptableObject.CreateInstance<ExpressionParameters>();
+                parametersObject.name = "ExpressionParameters";
+                SaveAsset(parametersObject, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
+
+                AvatarDescriptor.customExpressions = true;
+                AvatarDescriptor.expressionParameters = parametersObject;
+            }
+
+            //Clear parameters
+            BuildParameters.Clear();
+            if(parametersObject.parameters != null)
+            {
+                foreach (var param in parametersObject.parameters)
+                {
+                    if (param != null && ActionsDescriptor.ignoreParameters.Contains(param.name))
+                        BuildParameters.Add(param);
+                }
+            }
+        }
+        protected static void DefineExpressionParameter(ExpressionParameters.Parameter parameter)
+        {
+            //Check if already exists
+            foreach(var param in BuildParameters)
+            {
+                if (param.name == parameter.name)
+                    return;
+            }
+
+            //Add
+            BuildParameters.Add(parameter);
+        }
+        protected static ExpressionParameters.Parameter FindExpressionParameter(string name)
+        {
+            foreach (var param in BuildParameters)
+            {
+                if (param.name == name)
+                    return param;
+            }
+            return null;
         }
 
         //Normal
@@ -1168,19 +1243,33 @@ namespace VRCAvatarActions
                         break;
                     //Custom
                     case ParameterEnum.Custom:
+                    {
+                        //Find the parameter
+                        bool found = false;
+                        foreach(var param in controller.parameters)
                         {
-                            //Find the parameter type
-                            Debug.LogError("TODO");
-
-                            //Add
-
-                            break;
+                            if(param.name == condition.parameter)
+                            {
+                                paramType = param.type;
+                                found = true;
+                                break;
+                            }
                         }
+
+                        if(!found)
+                        {
+                            Debug.LogError($"AddTriggerConditions, unable to find parameter named:{condition.parameter}");
+                            BuildFailed = true;
+                            return;
+                        }
+                        break;
+                    }
                     default:
-                        {
-                            Debug.LogError("Unknown parameter type");
-                            continue;
-                        }
+                    {
+                        Debug.LogError("AddTriggerConditions, unknown parameter type for trigger condition.");
+                        BuildFailed = true;
+                        return;
+                    }
                 }
 
                 //Add parameter
@@ -1207,6 +1296,9 @@ namespace VRCAvatarActions
         }
         protected static void BuildParameterDrivers(BaseActions.Action action, AnimatorState state)
         {
+            if (action.parameterDrivers.Count == 0)
+                return;
+
             var driverBehaviour = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
             driverBehaviour.localOnly = true;
             foreach(var driver in action.parameterDrivers)
@@ -2011,6 +2103,7 @@ namespace VRCAvatarActions
             {
                 selectedAction = action;
                 Repaint();
+                GUI.FocusControl(null);
             }
         }
 

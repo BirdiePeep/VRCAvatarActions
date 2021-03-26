@@ -201,7 +201,7 @@ namespace VRCAvatarActions
 
                         //Parent
                         if(parentAction != null)
-                            transition.AddCondition(AnimatorConditionMode.Equals, parentAction.controlValue, parentAction.parameter);
+                            parentAction.AddCondition(transition, true);
 
                         //Cleanup
                         unusedValues.Remove(visime);
@@ -248,7 +248,7 @@ namespace VRCAvatarActions
                 transition.exitTime = 0;
                 transition.duration = defaultAction != null ? defaultAction.fadeIn : 0f;
                 transition.canTransitionToSelf = false;
-                transition.AddCondition(AnimatorConditionMode.NotEqual, parentAction.controlValue, parentAction.parameter);
+                parentAction.AddCondition(transition, false);
             }
         }
     }

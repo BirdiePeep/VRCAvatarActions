@@ -31,6 +31,7 @@ namespace VRCAvatarActions
             public string parameter;
             public MenuActions subMenu;
             public List<NonMenuActions> subActions = new List<NonMenuActions>();
+            public bool isOffState = false;
 
             //Meta
             public int controlValue = 0;
@@ -52,8 +53,6 @@ namespace VRCAvatarActions
                     case MenuType.Toggle:
                     case MenuType.Slider:
                         if (string.IsNullOrEmpty(parameter))
-                            return false;
-                        if(!AffectsAnyLayer())
                             return false;
                         break;
                     case MenuType.SubMenu:
@@ -94,7 +93,7 @@ namespace VRCAvatarActions
 
                 //Is parameter bool?
                 AnimatorConditionMode mode;
-                var param = AvatarDescriptor.expressionParameters.FindParameter(this.parameter);
+                var param = FindExpressionParameter(this.parameter);
                 if(param.valueType == ExpressionParameters.ValueType.Bool)
                     mode = equals ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot;
                 else if(param.valueType == ExpressionParameters.ValueType.Int)
@@ -209,9 +208,8 @@ namespace VRCAvatarActions
                 }
                 else
                 {
-                    //Check if valid
-                    if (action.AffectsAnyLayer())
-                        output.Add(action);
+                    //Add
+                    output.Add(action);
                 }
 
                 //Increment
@@ -228,21 +226,9 @@ namespace VRCAvatarActions
 
         static void BuildExpressionParameters(List<MenuAction> sourceActions)
         {
-            //Check if parameter object exists
-            ExpressionParameters parametersObject = AvatarDescriptor.expressionParameters;
-            if (AvatarDescriptor.expressionParameters == null || !AvatarDescriptor.customExpressions)
-            {
-                parametersObject = ScriptableObject.CreateInstance<ExpressionParameters>();
-                parametersObject.name = "ExpressionParameters";
-                SaveAsset(parametersObject, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
-
-                AvatarDescriptor.customExpressions = true;
-                AvatarDescriptor.expressionParameters = parametersObject;
-            }
-
-            //Find all parameters
+            //Find all unique menu parameters
             AllParameters.Clear();
-            foreach(var action in sourceActions)
+            foreach (var action in sourceActions)
             {
                 var param = GenerateParameter(action);
                 if (param != null && IsNewParameter(param))
@@ -269,39 +255,15 @@ namespace VRCAvatarActions
                 return true;
             }
 
-            //Add existing parameters
-            if(parametersObject.parameters != null)
-            {
-                //Retain ignored parameters
-                foreach (var param in parametersObject.parameters)
-                {
-                    if (ActionsDescriptor.ignoreParameters.Contains(param.name))
-                        AllParameters.Add(param);
-                }
-
-                //Check parameter count
-                if (parametersObject.CalcTotalCost() > VRCExpressionParameters.MAX_PARAMETER_COST)
-                {
-                    BuildFailed = true;
-                    EditorUtility.DisplayDialog("Build Error", $"Unable to build VRCExpressionParameters. Too many parameters defined.", "Okay");
-                    return;
-                }
-            }
-
-            //Build
-            parametersObject.parameters = new ExpressionParameters.Parameter[AllParameters.Count];
-            for (int i = 0; i < AllParameters.Count; i++)
-                parametersObject.parameters[i] = AllParameters[i];
-
-            //Save prefab
-            EditorUtility.SetDirty(parametersObject);
-            AssetDatabase.SaveAssets();
+            //Add
+            foreach(var param in AllParameters)
+                DefineExpressionParameter(param);
         }
         static void BuildActionValues(List<MenuAction> sourceActions)
         {
             var parametersObject = AvatarDescriptor.expressionParameters;
             ParameterToMenuActions.Clear();
-            foreach (var parameter in parametersObject.parameters)
+            foreach (var parameter in BuildParameters)
             {
                 if (parameter == null || string.IsNullOrEmpty(parameter.name))
                     continue;
@@ -309,6 +271,7 @@ namespace VRCAvatarActions
                 //Find all actions
                 List<MenuAction> actions = new List<MenuAction>();
                 int actionCount = 1;
+                bool defaultUsed = false;
                 foreach (var action in sourceActions)
                 {
                     if (action.parameter == parameter.name)
@@ -316,6 +279,22 @@ namespace VRCAvatarActions
                         actions.Add(action);
                         action.controlValue = actionCount;
                         actionCount += 1;
+
+                        //Default value
+                        if (action.isOffState)
+                        {
+                            if(!defaultUsed)
+                            {
+                                defaultUsed = true;
+                                action.controlValue = 0;
+                            }
+                            else
+                            {
+                                BuildFailed = true;
+                                EditorUtility.DisplayDialog("Build Failed", $"Two menu actions are marked as 'Is Default State' for parameter '{parameter.name}'.  Only one can be marked as default at a time.", "Okay");
+                                return;
+                            }
+                        }
                     }
                 }
                 ParameterToMenuActions.Add(parameter.name, actions);
@@ -493,7 +472,7 @@ namespace VRCAvatarActions
                 BuildSliderLayer(sourceActions, layerType, parameter.name);
             }
         }
-        static void BuildSliderLayer(List<MenuAction> sourceActions, AnimationLayer layerType, string parameter)
+        public static void BuildSliderLayer(List<MenuAction> sourceActions, AnimationLayer layerType, string parameter)
         {
             var controller = GetController(layerType);
 
@@ -558,7 +537,7 @@ namespace VRCAvatarActions
                     continue;
 
                 //Parameter
-                AddParameter(controller, parameter.name, AnimatorControllerParameterType.Int, 0);
+                AddParameter(controller, parameter.name, parameter.valueType == ExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool : AnimatorControllerParameterType.Int, 0);
 
                 //Sub-Actions
                 foreach(var parentAction in layerActions)
@@ -656,6 +635,12 @@ namespace VRCAvatarActions
         {
             //Parameter
             action.parameter = DrawParameterDropDown(action.parameter, "Parameter");
+
+            if(action.menuType == MenuActions.MenuAction.MenuType.Toggle)
+            {
+                string tooltip = "This action will be used when no other toggle with the same parameter is turned on.\n\nOnly one action can be marked as the off state for a parameter name.";
+                action.isOffState = EditorGUILayout.Toggle(new GUIContent("Is Off State", tooltip), action.isOffState);
+            }
 
             //Default
             base.Inspector_Action_Body(action);
