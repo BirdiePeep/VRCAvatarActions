@@ -672,16 +672,24 @@ namespace VRCAvatarActions
             AnimatorController GetController(AvatarDescriptor.AnimLayerType animLayerType, string name)
             {
                 //Find desc layer
+                bool foundLayer = false;
                 AvatarDescriptor.CustomAnimLayer descLayer = new AvatarDescriptor.CustomAnimLayer();
                 int descLayerIndex = 0;
                 foreach(var layer in AvatarDescriptor.baseAnimationLayers)
                 {
-                    if(layer.type == animLayerType)
+                    if (layer.type == animLayerType)
                     {
                         descLayer = layer;
+                        foundLayer = true;
                         break;
                     }
                     descLayerIndex++;
+                }
+                if(!foundLayer)
+                {
+                    EditorUtility.DisplayDialog("Build Error", $"Unable to find {animLayerType} layer on VRCAvatarDescriptor.  Please use the 'Reset To Default' button on the avatar descriptor under Playable Layers.", "Okay");
+                    BuildFailed = true;
+                    return null;
                 }
 
                 //Find/Create Layer
