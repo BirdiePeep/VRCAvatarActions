@@ -4,6 +4,7 @@ using UnityEditor;
 using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionsMenu = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
+using VRC.SDK3.Avatars.Components;
 
 #if UNITY_EDITOR
 namespace VRCAvatarActions
@@ -121,7 +122,7 @@ namespace VRCAvatarActions
         };
         protected static List<string> popupCache = new List<string>();
 
-		protected string DrawParameterDropDown(string parameter, string label)
+        public static string DrawParameterDropDown(string parameter, string label, VRCAvatarDescriptor avatarDescriptor)
         {
             EditorGUILayout.BeginHorizontal();
             {
@@ -136,7 +137,7 @@ namespace VRCAvatarActions
                     else
                     {
                         currentIndex = -2;
-                        for (int i = 0; i < GetExpressionParametersCount(); i++)
+                        for (int i = 0; i < avatarDescriptor.GetExpressionParameterCount(); i++)
                         {
                             var item = avatarDescriptor.GetExpressionParameter(i);
                             if (item.name == parameter)
@@ -157,7 +158,7 @@ namespace VRCAvatarActions
                             if (currentIndex == 0)
                                 parameter = "";
                             else
-                                parameter = GetExpressionParameter(currentIndex - 1).name;
+                                parameter = avatarDescriptor.GetExpressionParameter(currentIndex - 1).name;
                         }
                     }
                     EditorGUI.EndDisabledGroup();
@@ -174,12 +175,16 @@ namespace VRCAvatarActions
             }
             EditorGUILayout.EndHorizontal();
 
-            if(string.IsNullOrEmpty(parameter))
+            if (string.IsNullOrEmpty(parameter))
             {
                 EditorGUILayout.HelpBox("Parameter required.", MessageType.Error);
             }
 
             return parameter;
+        }
+        protected string DrawParameterDropDown(string parameter, string label)
+        {
+            return DrawParameterDropDown(parameter, label, avatarDescriptor);
         }
         protected int GetExpressionParametersCount()
         {

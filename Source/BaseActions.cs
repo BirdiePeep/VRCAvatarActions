@@ -424,7 +424,7 @@ namespace VRCAvatarActions
             public bool foldoutAnimations = false;
             public bool foldoutParameterDrivers = false;
 
-            UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter = true)
+            public UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter = true)
             {
                 //Find layer group
                 Action.Animations group;
@@ -759,9 +759,6 @@ namespace VRCAvatarActions
         }
         public static void BuildMain()
         {
-            //Build parameters
-
-
             //Build menu
             if (ActionsDescriptor.menuActions != null)
             {
@@ -794,6 +791,14 @@ namespace VRCAvatarActions
             //Save Parameters
             {
                 AvatarDescriptor.expressionParameters.parameters = BuildParameters.ToArray();
+
+                //Parameter defaults
+                foreach (var paramDefault in ActionsDescriptor.parameterDefaults)
+                {
+                    var param = AvatarDescriptor.expressionParameters.FindParameter(paramDefault.name);
+                    if (param != null)
+                        param.defaultValue = paramDefault.value;
+                }
 
                 //Check parameter count
                 var parametersObject = AvatarDescriptor.expressionParameters;
@@ -861,7 +866,7 @@ namespace VRCAvatarActions
         }
 
         //Normal
-        protected static void BuildActionLayer(UnityEditor.Animations.AnimatorController controller, IEnumerable<Action> actions, string layerName, MenuActions.MenuAction parentAction)
+        protected static void BuildActionLayer(UnityEditor.Animations.AnimatorController controller, IEnumerable<Action> actions, string layerName, MenuActions.MenuAction parentAction, bool turnOffState = true)
         {
             //Prepare layer
             var layer = GetControllerLayer(controller, layerName);
@@ -885,6 +890,17 @@ namespace VRCAvatarActions
 
             //Waiting state
             var waitingState = layer.stateMachine.AddState("Waiting", new Vector3(0, 0, 0));
+            if (turnOffState)
+            {
+                //Animation Layer Weight
+                var layerWeight = waitingState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
+                layerWeight.goalWeight = 0;
+                layerWeight.layer = layerIndex;
+                layerWeight.blendDuration = 0;
+                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.Action;
+            }
+            else
+                waitingState.writeDefaultValues = false;
 
             //Actions
             int actionIter = 0;
@@ -972,9 +988,10 @@ namespace VRCAvatarActions
                     lastState = state;
                 }
 
-                //Complete state
+                //Fadeout state
+                if(action.fadeOut > 0)
                 {
-                    var state = layer.stateMachine.AddState(action.name + "_Complete", StatePosition(5, actionIter));
+                    var state = layer.stateMachine.AddState(action.name + "_Fadeout", StatePosition(5, actionIter));
                     state.motion = action.GetAnimation(AnimationLayer.Action, false);
 
                     //Transition
@@ -989,6 +1006,7 @@ namespace VRCAvatarActions
                 }
 
                 //Cleanup state
+                if(action.bodyOverride.HasAny())
                 {
                     var state = layer.stateMachine.AddState(action.name + "_Cleanup", StatePosition(6, actionIter));
 
@@ -999,20 +1017,6 @@ namespace VRCAvatarActions
                     transition.duration = 0f;
                     transition.AddCondition(AnimatorConditionMode.If, 1, "True");
 
-                    //Exit Transition
-                    transition = state.AddExitTransition();
-                    transition.hasExitTime = false;
-                    transition.exitTime = 0f;
-                    transition.duration = 0f;
-                    transition.AddCondition(AnimatorConditionMode.If, 1, "True");
-
-                    //Animation Layer Weight
-                    var layerWeight = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                    layerWeight.goalWeight = 0;
-                    layerWeight.layer = layerIndex;
-                    layerWeight.blendDuration = 0;
-                    layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.Action;
-
                     //Tracking
                     SetupTracking(action, state, TrackingType.Tracking);
 
@@ -1020,11 +1024,20 @@ namespace VRCAvatarActions
                     lastState = state;
                 }
 
+                //Exit transition
+                {
+                    var transition = lastState.AddExitTransition();
+                    transition.hasExitTime = false;
+                    transition.exitTime = 0f;
+                    transition.duration = 0f;
+                    transition.AddCondition(AnimatorConditionMode.If, 1, "True");
+                }
+
                 //Iterate
                 actionIter += 1;
             }
         }
-        protected static void BuildNormalLayer(UnityEditor.Animations.AnimatorController controller, IEnumerable<Action> actions, string layerName, AnimationLayer layerType, MenuActions.MenuAction parentAction)
+        protected static void BuildNormalLayer(UnityEditor.Animations.AnimatorController controller, IEnumerable<Action> actions, string layerName, AnimationLayer layerType, MenuActions.MenuAction parentAction, bool turnOffState = true)
         {
             //Prepare layer
             var layer = GetControllerLayer(controller, layerName);
@@ -1038,8 +1051,19 @@ namespace VRCAvatarActions
             //Animation Layer Weight
             var layerIndex = GetLayerIndex(controller, layer);
 
-            //Waiting state
-            var waitingState = layer.stateMachine.AddState("Waiting", new Vector3(0, 0, 0));
+            //Waiting
+            AnimatorState waitingState = layer.stateMachine.AddState("Waiting", new Vector3(0, 0, 0));
+            if (turnOffState)
+            {
+                //Animation Layer Weight
+                var layerWeight = waitingState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
+                layerWeight.goalWeight = 0;
+                layerWeight.layer = layerIndex;
+                layerWeight.blendDuration = 0;
+                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
+            }
+            else
+                waitingState.writeDefaultValues = false;
 
             //Each action
             int actionIter = 0;
@@ -1089,7 +1113,7 @@ namespace VRCAvatarActions
                 }
 
                 //Exit
-                if(action.HasExit() || parentAction != null)
+                if (action.HasExit() || parentAction != null)
                 {
                     //Disable
                     {
@@ -1103,9 +1127,10 @@ namespace VRCAvatarActions
                         lastState = state;
                     }
 
-                    //Complete
+                    //Fadeout
+                    if(action.fadeOut > 0)
                     {
-                        var state = layer.stateMachine.AddState(action.name + "_Complete", StatePosition(4, actionIter));
+                        var state = layer.stateMachine.AddState(action.name + "_Fadeout", StatePosition(4, actionIter));
 
                         //Transition
                         var transition = lastState.AddTransition(state);
@@ -1118,6 +1143,7 @@ namespace VRCAvatarActions
                     }
 
                     //Cleanup
+                    if (action.bodyOverride.HasAny())
                     {
                         var state = layer.stateMachine.AddState(action.name + "_Cleanup", StatePosition(5, actionIter));
 
@@ -1126,13 +1152,6 @@ namespace VRCAvatarActions
                         transition.hasExitTime = false;
                         transition.duration = 0;
                         transition.AddCondition(AnimatorConditionMode.If, 1, "True");
-
-                        //Animation Layer Weight
-                        var layerWeight = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                        layerWeight.goalWeight = 0;
-                        layerWeight.layer = layerIndex;
-                        layerWeight.blendDuration = 0;
-                        layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
 
                         //Tracking
                         SetupTracking(action, state, TrackingType.Tracking);
@@ -1143,10 +1162,10 @@ namespace VRCAvatarActions
 
                     //Transition Exit
                     {
-                        //Exit Transition
                         var transition = lastState.AddExitTransition();
                         transition.hasExitTime = false;
-                        transition.duration = 0;
+                        transition.exitTime = 0f;
+                        transition.duration = 0f;
                         transition.AddCondition(AnimatorConditionMode.If, 1, "True");
                     }
                 }
@@ -1357,17 +1376,7 @@ namespace VRCAvatarActions
         //Helpers
         protected static void SetupTracking(BaseActions.Action action, AnimatorState state, TrackingType trackingType)
         {
-            //Check for any change
-            if (!action.bodyOverride.head &&
-                !action.bodyOverride.leftHand &&
-                !action.bodyOverride.rightHand &&
-                !action.bodyOverride.hip &&
-                !action.bodyOverride.leftFoot &&
-                !action.bodyOverride.rightFoot &&
-                !action.bodyOverride.leftFingers &&
-                !action.bodyOverride.rightFingers &&
-                !action.bodyOverride.eyes &&
-                !action.bodyOverride.mouth)
+            if (!action.bodyOverride.HasAny())
                 return;
 
             //Add tracking behaviour

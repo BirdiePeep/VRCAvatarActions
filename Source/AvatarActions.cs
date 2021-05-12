@@ -12,19 +12,28 @@ namespace VRCAvatarActions
     public class AvatarActions : MonoBehaviour
     {
         //Descriptor Data
-        public VRCAvatarDescriptor avatar;
+        public VRCAvatarDescriptor avatarDescriptor;
         public MenuActions menuActions;
         public List<NonMenuActions> otherActions = new List<NonMenuActions>();
 
         //Build Options
         public List<string> ignoreLayers = new List<string>();
         public List<string> ignoreParameters = new List<string>();
+        public List<ParamDefault> parameterDefaults = new List<ParamDefault>();
+
+        [System.Serializable]
+        public struct ParamDefault
+        {
+            public string name;
+            public float value;
+        }
 
         //Meta
         public bool foldoutBuildData = false;
         public bool foldoutBuildOptions = false;
         public bool foldoutIgnoreLayers = false;
         public bool foldoutIgnoreParameters = false;
+        public bool foldoutParameterDefaults = false;
 
         //Helper
         public UnityEngine.Object ReturnAnyScriptableObject()
@@ -53,24 +62,29 @@ namespace VRCAvatarActions
     public class AvatarActionsEditor : Editor
     {
         AvatarActions script;
-        VRCAvatarDescriptor avatarDescriptor; 
 
         public override void OnInspectorGUI()
         {
             script = target as AvatarActions;
-            avatarDescriptor = script.avatar;
-
             EditorGUI.BeginChangeCheck();
-            InspectorBody();
+            {
+                Inspector_Body();
+            }
             if(EditorGUI.EndChangeCheck())
             {
-                EditorUtility.SetDirty(script);
+                EditorUtility.SetDirty(target);
             }
         }
-        void InspectorBody()
+        public void Inspector_Body()
         {
-            //Target Avatar
-            script.avatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField("Avatar", script.avatar, typeof(VRCAvatarDescriptor), true);
+            //Avatar
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUI.indentLevel += 1;
+            {
+                script.avatarDescriptor = (VRCAvatarDescriptor)EditorGUILayout.ObjectField("Avatar", script.avatarDescriptor, typeof(VRCAvatarDescriptor), true);
+            }
+            EditorGUI.indentLevel -= 1;
+            EditorGUILayout.EndVertical();
 
             //Menu Actions
             EditorGUILayout.BeginVertical(GUI.skin.box);
@@ -113,10 +127,10 @@ namespace VRCAvatarActions
             EditorBase.Divider();
 
             //Build
-            EditorGUI.BeginDisabledGroup(script.ReturnAnyScriptableObject() == null || avatarDescriptor == null);
+            EditorGUI.BeginDisabledGroup(script.ReturnAnyScriptableObject() == null || script.avatarDescriptor == null);
             if (GUILayout.Button("Build Avatar Data", GUILayout.Height(32)))
             {
-                BaseActions.BuildAvatarData(avatarDescriptor, script);
+                BaseActions.BuildAvatarData(script.avatarDescriptor, script);
             }
             EditorGUI.EndDisabledGroup();
 
@@ -161,6 +175,43 @@ namespace VRCAvatarActions
                         }
                         EditorGUI.indentLevel -= 1;
                     }
+
+                    //Parameter Defaults
+                    {
+                        EditorGUI.indentLevel += 1;
+                        script.foldoutParameterDefaults = EditorGUILayout.Foldout(script.foldoutParameterDefaults, BaseActionsEditor.Title("Paramater Defaults", script.parameterDefaults.Count > 0));
+                        if (script.foldoutParameterDefaults)
+                        {
+                            //Add
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Space(EditorGUI.indentLevel * 10);
+                            if (GUILayout.Button("Add"))
+                            {
+                                script.parameterDefaults.Add(new AvatarActions.ParamDefault());
+                            }
+                            GUILayout.EndHorizontal();
+
+                            //Layers
+                            for (int i = 0; i < script.parameterDefaults.Count; i++)
+                            {
+                                var value = script.parameterDefaults[i];
+
+                                EditorGUILayout.BeginHorizontal();
+                                value.name = EditorGUILayout.TextField(value.name);
+                                value.value = EditorGUILayout.FloatField(value.value);
+
+                                script.parameterDefaults[i] = value;
+
+                                if (GUILayout.Button("X", GUILayout.Width(32)))
+                                {
+                                    script.parameterDefaults.RemoveAt(i);
+                                    i--;
+                                }
+                                EditorGUILayout.EndHorizontal();
+                            }
+                        }
+                        EditorGUI.indentLevel -= 1;
+                    }
                 }
             }
             EditorGUI.indentLevel -= 1;
@@ -175,7 +226,7 @@ namespace VRCAvatarActions
                 void AnimationController(VRCAvatarDescriptor.AnimLayerType animLayerType, string name)
                 {
                     VRCAvatarDescriptor.CustomAnimLayer descLayer = new VRCAvatarDescriptor.CustomAnimLayer();
-                    foreach (var layer in avatarDescriptor.baseAnimationLayers)
+                    foreach (var layer in script.avatarDescriptor.baseAnimationLayers)
                     {
                         if (layer.type == animLayerType)
                         {
@@ -199,8 +250,8 @@ namespace VRCAvatarActions
 
                 AnimationController(VRCAvatarDescriptor.AnimLayerType.Action, "Action Controller");
                 AnimationController(VRCAvatarDescriptor.AnimLayerType.FX, "FX Controller");
-                avatarDescriptor.expressionsMenu = (ExpressionsMenu)EditorGUILayout.ObjectField("Expressions Menu", avatarDescriptor.expressionsMenu, typeof(ExpressionsMenu), false);
-                avatarDescriptor.expressionParameters = (ExpressionParameters)EditorGUILayout.ObjectField("Expression Parameters", avatarDescriptor.expressionParameters, typeof(ExpressionParameters), false);
+                script.avatarDescriptor.expressionsMenu = (ExpressionsMenu)EditorGUILayout.ObjectField("Expressions Menu", script.avatarDescriptor.expressionsMenu, typeof(ExpressionsMenu), false);
+                script.avatarDescriptor.expressionParameters = (ExpressionParameters)EditorGUILayout.ObjectField("Expression Parameters", script.avatarDescriptor.expressionParameters, typeof(ExpressionParameters), false);
             }
             EditorGUI.indentLevel -= 1;
             EditorGUILayout.EndVertical();

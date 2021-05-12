@@ -435,7 +435,7 @@ namespace VRCAvatarActions
             var controller = GetController(layerType);
 
             //Find matching actions
-            var layerActions = new List<Action>();
+            var layerActions = new List<MenuAction>();
             foreach (var parameter in AllParameters)
             {
                 layerActions.Clear();
@@ -454,14 +454,26 @@ namespace VRCAvatarActions
                 if (layerActions.Count == 0)
                     continue;
 
+                //Check of off state
+                MenuAction offAction = null;
+                foreach(var action in layerActions)
+                {
+                    if(action.controlValue == 0)
+                    {
+                        offAction = action;
+                        break;
+                    }
+                }
+
                 //Parameter
                 AddParameter(controller, parameter.name, parameter.valueType == ExpressionParameters.ValueType.Bool ? AnimatorControllerParameterType.Bool : AnimatorControllerParameterType.Int, 0);
 
                 //Build
-                if(layerType == AnimationLayer.Action)
-                    BuildActionLayer(controller, layerActions, parameter.name, null);
+                bool turnOffState = offAction == null;
+                if (layerType == AnimationLayer.Action)
+                    BuildActionLayer(controller, layerActions, parameter.name, null, turnOffState);
                 else
-                    BuildNormalLayer(controller, layerActions, parameter.name, layerType, null);
+                    BuildNormalLayer(controller, layerActions, parameter.name, layerType, null, turnOffState);
             }
         }
         static void BuildSliderLayers(List<MenuAction> sourceActions, AnimationLayer layerType)
@@ -480,7 +492,7 @@ namespace VRCAvatarActions
             var layerActions = new List<MenuAction>();
             foreach (var actionIter in sourceActions)
             {
-                if (actionIter.menuType == MenuActions.MenuAction.MenuType.Slider && actionIter.parameter == parameter && actionIter.GetAnimation(layerType) != null)
+                if (actionIter.menuType == MenuActions.MenuAction.MenuType.Slider && actionIter.parameter == parameter && actionIter.GetAnimationRaw(layerType) != null)
                     layerActions.Add(actionIter);
             }
             if (layerActions.Count == 0)
@@ -504,7 +516,7 @@ namespace VRCAvatarActions
             //Blend state
             {
                 var state = layer.stateMachine.AddState(action.name + "_Blend", StatePosition(0, 0));
-                state.motion = action.GetAnimation(layerType);
+                state.motion = action.GetAnimationRaw(layerType);
                 state.timeParameter = action.parameter;
                 state.timeParameterActive = true;
 
