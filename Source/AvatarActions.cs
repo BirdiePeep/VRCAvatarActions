@@ -221,7 +221,7 @@ namespace VRCAvatarActions
             EditorGUILayout.BeginVertical(GUI.skin.box);
             EditorGUI.indentLevel += 1;
             script.foldoutBuildData = EditorGUILayout.Foldout(script.foldoutBuildData, "Built Data");
-            if (script.foldoutBuildData)
+            if (script.foldoutBuildData && script.avatarDescriptor != null)
             {
                 void AnimationController(VRCAvatarDescriptor.AnimLayerType animLayerType, string name)
                 {

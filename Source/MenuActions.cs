@@ -233,6 +233,10 @@ namespace VRCAvatarActions
                 var param = GenerateParameter(action);
                 if (param != null && IsNewParameter(param))
                     AllParameters.Add(param);
+
+                param = GenerateParameterIsOpen(action);
+                if(param != null && IsNewParameter(param))
+                    AllParameters.Add(param);
             }
             bool IsNewParameter(ExpressionParameters.Parameter param)
             {
@@ -492,7 +496,7 @@ namespace VRCAvatarActions
             var layerActions = new List<MenuAction>();
             foreach (var actionIter in sourceActions)
             {
-                if (actionIter.menuType == MenuActions.MenuAction.MenuType.Slider && actionIter.parameter == parameter && actionIter.GetAnimationRaw(layerType) != null)
+                if (actionIter.menuType == MenuActions.MenuAction.MenuType.Slider && actionIter.parameter == parameter && actionIter.GetAnimation(layerType) != null)
                     layerActions.Add(actionIter);
             }
             if (layerActions.Count == 0)
@@ -516,7 +520,7 @@ namespace VRCAvatarActions
             //Blend state
             {
                 var state = layer.stateMachine.AddState(action.name + "_Blend", StatePosition(0, 0));
-                state.motion = action.GetAnimationRaw(layerType);
+                state.motion = action.GetAnimation(layerType);
                 state.timeParameter = action.parameter;
                 state.timeParameterActive = true;
 
@@ -580,6 +584,19 @@ namespace VRCAvatarActions
                     break;
             }
             return parameter;
+        }
+        static ExpressionParameters.Parameter GenerateParameterIsOpen(MenuAction action)
+        {
+            return null;
+            /*if (string.IsNullOrEmpty(action.parameterIsOpen))
+                return null;
+            if(!(action.menuType == MenuAction.MenuType.Slider || action.menuType == MenuAction.MenuType.SubMenu))
+                return null;
+
+            var parameter = new ExpressionParameters.Parameter();
+            parameter.name = action.parameterIsOpen;
+            parameter.valueType = ExpressionParameters.ValueType.Bool;
+            return parameter;*/
         }
     }
 

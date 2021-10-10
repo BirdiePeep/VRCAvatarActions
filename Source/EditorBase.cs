@@ -99,7 +99,7 @@ namespace VRCAvatarActions
 
         protected const float SmallButtonSize = 48f;
 
-        #region Parameters
+#region Parameters
         protected static string[] ParameterNames =
         {
             "[None]",
@@ -122,7 +122,7 @@ namespace VRCAvatarActions
         };
         protected static List<string> popupCache = new List<string>();
 
-        public static string DrawParameterDropDown(string parameter, string label, VRCAvatarDescriptor avatarDescriptor)
+        public static string DrawParameterDropDown(string parameter, string label, bool required, VRCAvatarDescriptor avatarDescriptor)
         {
             EditorGUILayout.BeginHorizontal();
             {
@@ -175,16 +175,16 @@ namespace VRCAvatarActions
             }
             EditorGUILayout.EndHorizontal();
 
-            if (string.IsNullOrEmpty(parameter))
+            if (string.IsNullOrEmpty(parameter) && required)
             {
                 EditorGUILayout.HelpBox("Parameter required.", MessageType.Error);
             }
 
             return parameter;
         }
-        protected string DrawParameterDropDown(string parameter, string label)
+        protected string DrawParameterDropDown(string parameter, string label, bool required=true)
         {
-            return DrawParameterDropDown(parameter, label, avatarDescriptor);
+            return DrawParameterDropDown(parameter, label, required, avatarDescriptor);
         }
         protected int GetExpressionParametersCount()
         {
@@ -198,9 +198,9 @@ namespace VRCAvatarActions
                 return avatarDescriptor.GetExpressionParameter(i);
             return null;
         }
-        #endregion
+#endregion
 
-        #region Styles
+#region Styles
         protected GUIStyle boxUnselected;
         protected GUIStyle boxSelected;
         protected GUIStyle boxDisabled;
@@ -221,9 +221,9 @@ namespace VRCAvatarActions
                 boxDisabled.normal.background = MakeTex(2, 2, new Color(0f, 0f, 0f, 0.25f));
             }
         }
-		#endregion
+#endregion
 
-		#region Helper Methods
+#region Helper Methods
 		public static void Divider()
         {
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
@@ -240,7 +240,7 @@ namespace VRCAvatarActions
             result.Apply();
             return result;
         }
-		#endregion
+#endregion
 	}
 }
 #endif

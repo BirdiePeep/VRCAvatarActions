@@ -8,8 +8,6 @@ using AvatarDescriptor = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using ExpressionParameters = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters;
 using TrackingType = VRC.SDKBase.VRC_AnimatorTrackingControl.TrackingType;
 using VRC.SDK3.Avatars.Components;
-using System;
-using System.Linq;
 
 namespace VRCAvatarActions
 {
@@ -424,7 +422,7 @@ namespace VRCAvatarActions
             public bool foldoutAnimations = false;
             public bool foldoutParameterDrivers = false;
 
-            public UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter = true)
+            UnityEngine.AnimationClip GetAnimationRaw(AnimationLayer layer, bool enter = true)
             {
                 //Find layer group
                 Action.Animations group;
@@ -498,43 +496,52 @@ namespace VRCAvatarActions
             }
             protected AnimationClip BuildGeneratedAnimation(string clipName, AnimationClip source)
             {
-                //Create new animation
-                AnimationClip animation = null;
-                if (source != null)
+                try
                 {
-                    animation = new AnimationClip();
-                    EditorUtility.CopySerialized(source, animation);
-                }
-                else
-                    animation = new AnimationClip();
-
-                //Properties
-                foreach (var item in this.objectProperties)
-                {
-                    //Is anything defined?
-                    if (string.IsNullOrEmpty(item.path))
-                        continue;
-
-                    //Find object
-                    item.objRef = BaseActionsEditor.FindPropertyObject(AvatarDescriptor.gameObject, item.path);
-                    if (item.objRef == null)
-                        continue;
-
-                    switch (item.type)
+                    //Create new animation
+                    AnimationClip animation = null;
+                    if (source != null)
                     {
-                        case ObjectProperty.Type.ObjectToggle: AddObjectToggle(animation, item, item.objRef); break;
-                        case ObjectProperty.Type.MaterialSwap: AddMaterialSwap(animation, item, item.objRef); break;
-                        case ObjectProperty.Type.BlendShape: (new ObjectProperty.BlendShape(item)).AddKeyframes(animation); break;
-                        case ObjectProperty.Type.PlayAudio: (new ObjectProperty.PlayAudio(item)).AddKeyframes(animation); break;
+                        animation = new AnimationClip();
+                        EditorUtility.CopySerialized(source, animation);
                     }
+                    else
+                        animation = new AnimationClip();
+
+                    //Properties
+                    foreach (var item in this.objectProperties)
+                    {
+                        //Is anything defined?
+                        if (string.IsNullOrEmpty(item.path))
+                            continue;
+
+                        //Find object
+                        item.objRef = BaseActionsEditor.FindPropertyObject(AvatarDescriptor.gameObject, item.path);
+                        if (item.objRef == null)
+                            continue;
+
+                        switch (item.type)
+                        {
+                            case ObjectProperty.Type.ObjectToggle: AddObjectToggle(animation, item, item.objRef); break;
+                            case ObjectProperty.Type.MaterialSwap: AddMaterialSwap(animation, item, item.objRef); break;
+                            case ObjectProperty.Type.BlendShape: (new ObjectProperty.BlendShape(item)).AddKeyframes(animation); break;
+                            case ObjectProperty.Type.PlayAudio: (new ObjectProperty.PlayAudio(item)).AddKeyframes(animation); break;
+                        }
+                    }
+
+                    //Save
+                    animation.name = clipName;
+                    SaveAsset(animation, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
+
+                    //Return
+                    return animation;
                 }
-
-                //Save
-                animation.name = clipName;
-                SaveAsset(animation, ActionsDescriptor.ReturnAnyScriptableObject(), "Generated");
-
-                //Return
-                return animation;
+                catch(System.Exception e)
+                {
+                    Debug.LogException(e);
+                    Debug.LogError($"Error while trying to generate animation '{clipName}'");
+                    return null;
+                }
             }
 
             public virtual void CopyTo(Action clone)
@@ -672,24 +679,16 @@ namespace VRCAvatarActions
             AnimatorController GetController(AvatarDescriptor.AnimLayerType animLayerType, string name)
             {
                 //Find desc layer
-                bool foundLayer = false;
                 AvatarDescriptor.CustomAnimLayer descLayer = new AvatarDescriptor.CustomAnimLayer();
                 int descLayerIndex = 0;
                 foreach(var layer in AvatarDescriptor.baseAnimationLayers)
                 {
-                    if (layer.type == animLayerType)
+                    if(layer.type == animLayerType)
                     {
                         descLayer = layer;
-                        foundLayer = true;
                         break;
                     }
                     descLayerIndex++;
-                }
-                if(!foundLayer)
-                {
-                    EditorUtility.DisplayDialog("Build Error", $"Unable to find {animLayerType} layer on VRCAvatarDescriptor.  Please use the 'Reset To Default' button on the avatar descriptor under Playable Layers.", "Okay");
-                    BuildFailed = true;
-                    return null;
                 }
 
                 //Find/Create Layer
@@ -1271,15 +1270,35 @@ namespace VRCAvatarActions
                     //Custom
                     case ParameterEnum.Custom:
                     {
-                        //Find the parameter
                         bool found = false;
-                        foreach(var param in controller.parameters)
+
+                        //Find
                         {
-                            if(param.name == condition.parameter)
+                            var param = FindExpressionParameter(condition.parameter);
+                            if(param != null)
                             {
-                                paramType = param.type;
+                                switch(param.valueType)
+                                {
+                                    default:
+                                    case ExpressionParameters.ValueType.Int: paramType = AnimatorControllerParameterType.Int; break;
+                                    case ExpressionParameters.ValueType.Float: paramType = AnimatorControllerParameterType.Float; break;
+                                    case ExpressionParameters.ValueType.Bool: paramType = AnimatorControllerParameterType.Bool; break;
+                                }
                                 found = true;
-                                break;
+                            } 
+                        }
+
+                        //Find
+                        if(!found)
+                        {
+                            foreach (var param in controller.parameters)
+                            {
+                                if (param.name == condition.parameter)
+                                {
+                                    paramType = param.type;
+                                    found = true;
+                                    break;
+                                }
                             }
                         }
 
@@ -2124,7 +2143,7 @@ namespace VRCAvatarActions
             }
         }
 
-        #region HelperMethods
+#region HelperMethods
         public static string Title(string name, bool isModified)
         {
             return name + (isModified ? "*" : "");
@@ -2195,7 +2214,7 @@ namespace VRCAvatarActions
             }
             return path;
         }
-        #endregion
+#endregion
     }
 }
 #endif
