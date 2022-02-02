@@ -206,8 +206,9 @@ namespace VRCAvatarActions
                     Exit = 1,
                 }
                 public Type type;
+                public bool useDefaultCondition = true;
                 public List<Condition> conditions = new List<Condition>();
-                public bool foldout;
+                public bool foldout = true;
             }
 
             [System.Serializable]
@@ -350,7 +351,8 @@ namespace VRCAvatarActions
                         var transition = lastState.AddTransition(state);
                         transition.hasExitTime = false;
                         transition.duration = transitionTime;
-                        this.AddCondition(transition, controlEquals);
+                        if(trigger.useDefaultCondition)
+                            this.AddCondition(transition, controlEquals);
 
                         //Conditions
                         AddTriggerConditions(controller, transition, trigger.conditions);
@@ -1508,6 +1510,9 @@ namespace VRCAvatarActions
         protected BaseActions script;
         protected BaseActions.Action selectedAction;
 
+        //Options
+        protected virtual bool HasDefaultTriggerConditions() { return false; }
+
         public void OnEnable()
         {
             var editor = target as BaseActions;
@@ -1984,6 +1989,12 @@ namespace VRCAvatarActions
                             //Conditions
                             if (GUILayout.Button("Add Condition"))
                                 trigger.conditions.Add(new BaseActions.Action.Condition());
+
+                            //Default condition
+                            if(HasDefaultTriggerConditions())
+                            {
+                                trigger.useDefaultCondition = EditorGUILayout.Toggle("Include Default Condition", trigger.useDefaultCondition);
+                            }
 
                             //Each Conditions
                             for (int conditionIter = 0; conditionIter < trigger.conditions.Count; conditionIter++)

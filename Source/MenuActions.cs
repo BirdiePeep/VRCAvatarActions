@@ -605,6 +605,8 @@ namespace VRCAvatarActions
     {
         MenuActions menuScript;
 
+        protected override bool HasDefaultTriggerConditions() { return true; }
+
         public override void Inspector_Header()
         {
             EditorGUILayout.HelpBox("Menu Actions - Actions that are displayed in the avatar's action menu.", MessageType.Info);
