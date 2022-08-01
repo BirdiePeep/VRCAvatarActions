@@ -826,6 +826,7 @@ namespace VRCAvatarActions
         }
 
         //Parameters
+        static protected Dictionary<string, ExpressionParameters.Parameter> AdditionalParameters = new Dictionary<string, ExpressionParameters.Parameter>();
         static protected List<ExpressionParameters.Parameter> BuildParameters = new List<ExpressionParameters.Parameter>();
         static void InitExpressionParameters()
         {
@@ -851,6 +852,48 @@ namespace VRCAvatarActions
                         BuildParameters.Add(param);
                 }
             }
+
+            //Find all additional parameters
+            AdditionalParameters.Clear();
+
+            //Receivers
+            var recivers = AvatarDescriptor.gameObject.GetComponentsInChildren<VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver>();
+            foreach(var item in recivers)
+            {
+                if(string.IsNullOrEmpty(item.parameter))
+                    continue;
+                switch(item.receiverType)
+                {
+                    case VRC.Dynamics.ContactReceiver.ReceiverType.Proximity:
+                        DefineAdditional(item.parameter, ExpressionParameters.ValueType.Float);
+                        break;
+                    default:
+                        DefineAdditional(item.parameter, ExpressionParameters.ValueType.Bool);
+                        break;
+                }
+            }
+
+            //PhysBones
+            var physBones = AvatarDescriptor.gameObject.GetComponentsInChildren<VRC.SDK3.Dynamics.PhysBone.Components.VRCPhysBone>();
+            foreach(var item in physBones)
+            {
+                if(string.IsNullOrEmpty(item.parameter))
+                    continue;
+                DefineAdditional($"{item.parameter}_IsGrabbed", ExpressionParameters.ValueType.Bool);
+                DefineAdditional($"{item.parameter}_Angle", ExpressionParameters.ValueType.Float);
+                DefineAdditional($"{item.parameter}_Stretch", ExpressionParameters.ValueType.Float);
+            }
+
+            void DefineAdditional(string name, ExpressionParameters.ValueType type)
+            {
+                if(AdditionalParameters.ContainsKey(name))
+                    return;
+
+                var param = new ExpressionParameters.Parameter();
+                param.name = name;
+                param.valueType = type;
+                AdditionalParameters.Add(param.name, param);
+            }
         }
         protected static void DefineExpressionParameter(ExpressionParameters.Parameter parameter)
         {
@@ -866,11 +909,19 @@ namespace VRCAvatarActions
         }
         protected static ExpressionParameters.Parameter FindExpressionParameter(string name)
         {
-            foreach (var param in BuildParameters)
+            //Build Params
+            foreach (var item in BuildParameters)
             {
-                if (param.name == name)
-                    return param;
+                if (item.name == name)
+                    return item;
             }
+
+            //Additional Params
+            ExpressionParameters.Parameter param;
+            if(AdditionalParameters.TryGetValue(name, out param))
+                return param;
+
+            //Fail
             return null;
         }
 
@@ -1287,7 +1338,7 @@ namespace VRCAvatarActions
                                     case ExpressionParameters.ValueType.Bool: paramType = AnimatorControllerParameterType.Bool; break;
                                 }
                                 found = true;
-                            } 
+                            }
                         }
 
                         //Find
