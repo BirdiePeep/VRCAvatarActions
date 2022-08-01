@@ -343,10 +343,6 @@ namespace VRCAvatarActions
                     //Add each transition
                     foreach (var trigger in triggers)
                     {
-                        //Check type
-                        if (trigger.type != triggerType)
-                            continue;
-
                         //Add
                         var transition = lastState.AddTransition(state);
                         transition.hasExitTime = false;
@@ -1378,8 +1374,13 @@ namespace VRCAvatarActions
                 switch (paramType)
                 {
                     case AnimatorControllerParameterType.Bool:
-                        transition.AddCondition(condition.logic == Action.Condition.Logic.NotEquals ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If, 1f, paramName);
+                    {
+                        if(condition.value == 0)
+                            transition.AddCondition(condition.logic == Action.Condition.Logic.Equals ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If, 1f, paramName);
+                        else
+                            transition.AddCondition(condition.logic == Action.Condition.Logic.NotEquals ? AnimatorConditionMode.IfNot : AnimatorConditionMode.If, 1f, paramName);
                         break;
+                    }
                     case AnimatorControllerParameterType.Int:
                         transition.AddCondition(condition.logic == Action.Condition.Logic.NotEquals ? AnimatorConditionMode.NotEqual : AnimatorConditionMode.Equals, condition.value, paramName);
                         break;
