@@ -34,7 +34,10 @@ namespace VRCAvatarActions
                 }
                 EditorGUI.EndDisabledGroup();
                 if(EditorGUI.EndChangeCheck())
+                {
+                    serializedObject.ApplyModifiedProperties();
                     EditorUtility.SetDirty(target);
+                }
             }
             if (EditorGUI.EndChangeCheck())
             {

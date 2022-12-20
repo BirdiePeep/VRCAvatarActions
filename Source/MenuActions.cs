@@ -520,16 +520,9 @@ namespace VRCAvatarActions
             //Blend state
             {
                 var state = layer.stateMachine.AddState(action.name + "_Blend", StatePosition(0, 0));
-                state.motion = action.GetAnimation(layerType);
+                state.motion = action.GetAnimation(layerType, true);
                 state.timeParameter = action.parameter;
                 state.timeParameterActive = true;
-
-                //Animation Layer Weight
-                var layerWeight = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                layerWeight.goalWeight = 1;
-                layerWeight.layer = layerIndex;
-                layerWeight.blendDuration = 0;
-                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
             }
         }
         static void BuildSubActionLayers(List<MenuAction> sourceActions, AnimationLayer layerType)

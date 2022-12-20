@@ -23,17 +23,19 @@ namespace VRCAvatarActions
 
         public enum Type
         {
-            ObjectToggle = 3450,
+            ToggleObject = 3450,
+            ToggleComponent = 6950,
             MaterialSwap = 7959,
             BlendShape = 9301,
             PlayAudio = 9908,
         }
-        public Type type = Type.ObjectToggle;
+        public Type type = Type.ToggleObject;
 
         //Data
         public string path;
         public UnityEngine.Object[] objects;
         public float[] values;
+        public string compType;
 
         //Meta-data
         public GameObject objRef;
@@ -91,6 +93,29 @@ namespace VRCAvatarActions
                 var curve = new AnimationCurve();
                 curve.AddKey(new Keyframe(0f, weight));
                 animation.SetCurve(path, typeof(SkinnedMeshRenderer), $"blendShape.{name}", curve);
+            }
+        }
+        public class Enabled : PropertyWrapper
+        {
+            public Enabled(ObjectProperty property) : base(property) { }
+            public override void AddKeyframes(AnimationClip animation)
+            {
+                var type = System.Type.GetType(prop.compType);
+                if(type == null)
+                {
+                    Debug.LogError($"Unable to find system type of value:{prop.compType}");
+                    return;
+                }
+                var component = objRef.GetComponent(type);
+                if(component == null)
+                {
+                    Debug.LogError($"Unable to find component type of value:{prop.compType}");
+                }
+
+                //Create curve
+                var curve = new AnimationCurve();
+                curve.AddKey(new Keyframe(0f, 1f));
+                animation.SetCurve(path, type, $"m_Enabled", curve);
             }
         }
         public class PlayAudio : PropertyWrapper

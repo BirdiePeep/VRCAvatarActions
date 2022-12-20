@@ -49,7 +49,6 @@ namespace VRCAvatarActions
             actions.Insert(index, action as GenericAction);
         }
 
-
         public override void Build(MenuActions.MenuAction parentAction)
         {
             BuildLayers(actions, AnimationLayer.Action, parentAction);

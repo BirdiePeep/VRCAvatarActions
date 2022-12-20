@@ -175,6 +175,12 @@ namespace VRCAvatarActions
                 //Build
                 var state = layer.stateMachine.AddState(action.name, StatePosition(0, actionIter + 1));
                 state.motion = action.GetAnimation(layerType, true);
+                if(!string.IsNullOrEmpty(action.timeParameter))
+                {
+                    state.timeParameter = action.timeParameter;
+                    state.timeParameterActive = true;
+                    AddParameter(controller, action.timeParameter, AnimatorControllerParameterType.Float, 0);
+                }
                 actionIter += 1;
 
                 //Conditions
@@ -222,13 +228,6 @@ namespace VRCAvatarActions
             if(defaultState == null)
                 defaultState = layer.stateMachine.AddState("Neutral", StatePosition(0, 0));
             layer.stateMachine.defaultState = defaultState;
-
-            //Animation Layer Weight
-            var layerWeight = defaultState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-            layerWeight.goalWeight = 1;
-            layerWeight.layer = GetLayerIndex(controller, layer);
-            layerWeight.blendDuration = 0;
-            layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
 
             //Default transitions
             foreach (var gesture in unusedGestures)

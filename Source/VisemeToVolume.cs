@@ -57,17 +57,6 @@ public class VisemeToVolume : VRCAvatarActions.NonMenuActions
             //State
             var state = layer.stateMachine.AddState($"Volume_{i}", StatePosition(1, i));
 
-            //Layer weight
-            if (i == 0)
-            {
-                //Animation Layer Weight
-                var layerWeight = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                layerWeight.goalWeight = 1;
-                layerWeight.layer = layerIndex;
-                layerWeight.blendDuration = 0;
-                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
-            }
-
             //Transition
             var transition = layer.stateMachine.AddAnyStateTransition(state);
             transition.canTransitionToSelf = false;

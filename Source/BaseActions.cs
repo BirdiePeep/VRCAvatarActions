@@ -107,9 +107,12 @@ namespace VRCAvatarActions
             }
             public Animations actionLayerAnimations = new Animations();
             public Animations fxLayerAnimations = new Animations();
+            public string timeParameter;
+
             public float fadeIn = 0;
             public float hold = 0;
             public float fadeOut = 0;
+            
 
             public bool HasAnimations()
             {
@@ -177,6 +180,7 @@ namespace VRCAvatarActions
                 public Type type = Type.RawValue;
                 public string name;
                 public float value = 1f;
+                public bool resetOnExit = false;
 
                 public VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType changeType = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set;
                 public float valueMin = 0;
@@ -224,6 +228,13 @@ namespace VRCAvatarActions
                     this.logic = source.logic;
                     this.value = source.value;
                     this.shared = source.shared;
+                }
+                public Condition(ParameterEnum type, string parameter, Logic logic, float value)
+                {
+                    this.type = type;
+                    this.parameter = parameter;
+                    this.logic = logic;
+                    this.value = value;
                 }
                 public enum Logic
                 {
@@ -520,7 +531,8 @@ namespace VRCAvatarActions
 
                         switch (item.type)
                         {
-                            case ObjectProperty.Type.ObjectToggle: AddObjectToggle(animation, item, item.objRef); break;
+                            case ObjectProperty.Type.ToggleObject: AddObjectToggle(animation, item, item.objRef); break;
+                            case ObjectProperty.Type.ToggleComponent: (new ObjectProperty.Enabled(item)).AddKeyframes(animation); break;
                             case ObjectProperty.Type.MaterialSwap: AddMaterialSwap(animation, item, item.objRef); break;
                             case ObjectProperty.Type.BlendShape: (new ObjectProperty.BlendShape(item)).AddKeyframes(animation); break;
                             case ObjectProperty.Type.PlayAudio: (new ObjectProperty.PlayAudio(item)).AddKeyframes(animation); break;
@@ -553,6 +565,7 @@ namespace VRCAvatarActions
                 clone.actionLayerAnimations.exit = this.actionLayerAnimations.exit;
                 clone.fxLayerAnimations.enter = this.fxLayerAnimations.enter;
                 clone.fxLayerAnimations.exit = this.fxLayerAnimations.exit;
+                clone.timeParameter = this.timeParameter;
                 clone.fadeIn = this.fadeIn;
                 clone.hold = this.hold;
                 clone.fadeOut = this.fadeOut;
@@ -631,6 +644,7 @@ namespace VRCAvatarActions
 
         protected static AvatarDescriptor AvatarDescriptor = null;
         protected static AvatarActions ActionsDescriptor = null;
+        protected static Animator Animator = null;
         protected static List<ExpressionParameters.Parameter> AllParameters = new List<ExpressionParameters.Parameter>();
         protected static AnimatorController ActionController;
         protected static AnimatorController FxController;
@@ -654,6 +668,7 @@ namespace VRCAvatarActions
             //Store
             AvatarDescriptor = desc;
             ActionsDescriptor = actionsDesc;
+            Animator = desc.gameObject.GetComponent<Animator>();
             BuildFailed = false;
 
             //Build
@@ -853,7 +868,7 @@ namespace VRCAvatarActions
             AdditionalParameters.Clear();
 
             //Receivers
-            var recivers = AvatarDescriptor.gameObject.GetComponentsInChildren<VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver>();
+            var recivers = AvatarDescriptor.gameObject.GetComponentsInChildren<VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver>(true);
             foreach(var item in recivers)
             {
                 if(string.IsNullOrEmpty(item.parameter))
@@ -870,7 +885,7 @@ namespace VRCAvatarActions
             }
 
             //PhysBones
-            var physBones = AvatarDescriptor.gameObject.GetComponentsInChildren<VRC.SDK3.Dynamics.PhysBone.Components.VRCPhysBone>();
+            var physBones = AvatarDescriptor.gameObject.GetComponentsInChildren<VRC.SDK3.Dynamics.PhysBone.Components.VRCPhysBone>(true);
             foreach(var item in physBones)
             {
                 if(string.IsNullOrEmpty(item.parameter))
@@ -890,6 +905,15 @@ namespace VRCAvatarActions
                 param.valueType = type;
                 AdditionalParameters.Add(param.name, param);
             }
+        }
+        protected static void DefineExpressionParamaeter(string name, ExpressionParameters.ValueType valueType, float defaultValue=0, bool saved=false)
+        {
+            var param = new ExpressionParameters.Parameter();
+            param.name = name;
+            param.valueType = valueType;
+            param.defaultValue = 0;
+            param.saved = false;
+            DefineExpressionParameter(param);
         }
         protected static void DefineExpressionParameter(ExpressionParameters.Parameter parameter)
         {
@@ -946,16 +970,7 @@ namespace VRCAvatarActions
 
             //Waiting state
             var waitingState = layer.stateMachine.AddState("Waiting", new Vector3(0, 0, 0));
-            if (turnOffState)
-            {
-                //Animation Layer Weight
-                var layerWeight = waitingState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                layerWeight.goalWeight = 0;
-                layerWeight.layer = layerIndex;
-                layerWeight.blendDuration = 0;
-                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.Action;
-            }
-            else
+            if (!turnOffState)
                 waitingState.writeDefaultValues = false;
 
             //Actions
@@ -971,13 +986,6 @@ namespace VRCAvatarActions
 
                     //Transition
                     action.AddTransitions(controller, waitingState, state, 0, Action.Trigger.Type.Enter, parentAction);
-
-                    //Animation Layer Weight
-                    var layerWeight = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                    layerWeight.goalWeight = 1;
-                    layerWeight.layer = layerIndex;
-                    layerWeight.blendDuration = 0;
-                    layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.Action;
 
                     //Playable Layer
                     var playable = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCPlayableLayerControl>();
@@ -996,6 +1004,12 @@ namespace VRCAvatarActions
                 {
                     var state = layer.stateMachine.AddState(action.name + "_Enable", StatePosition(2, actionIter));
                     state.motion = action.GetAnimation(AnimationLayer.Action, true);
+                    if(!string.IsNullOrEmpty(action.timeParameter))
+                    {
+                        state.timeParameter = action.timeParameter;
+                        state.timeParameterActive = true;
+                        AddParameter(controller, action.timeParameter, AnimatorControllerParameterType.Float, 0);
+                    }
 
                     //Transition
                     var transition = lastState.AddTransition(state);
@@ -1015,6 +1029,12 @@ namespace VRCAvatarActions
                     {
                         var state = layer.stateMachine.AddState(action.name + "_Hold", StatePosition(3, actionIter));
                         state.motion = action.GetAnimation(AnimationLayer.Action, true);
+                        if(!string.IsNullOrEmpty(action.timeParameter))
+                        {
+                            state.timeParameter = action.timeParameter;
+                            state.timeParameterActive = true;
+                            AddParameter(controller, action.timeParameter, AnimatorControllerParameterType.Float, 0);
+                        }
 
                         //Transition
                         var transition = lastState.AddTransition(state);
@@ -1109,16 +1129,7 @@ namespace VRCAvatarActions
 
             //Waiting
             AnimatorState waitingState = layer.stateMachine.AddState("Waiting", new Vector3(0, 0, 0));
-            if (turnOffState)
-            {
-                //Animation Layer Weight
-                var layerWeight = waitingState.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                layerWeight.goalWeight = 0;
-                layerWeight.layer = layerIndex;
-                layerWeight.blendDuration = 0;
-                layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
-            }
-            else
+            if (!turnOffState)
                 waitingState.writeDefaultValues = false;
 
             //Each action
@@ -1131,22 +1142,21 @@ namespace VRCAvatarActions
                 {
                     var state = layer.stateMachine.AddState(action.name + "_Enable", StatePosition(1, actionIter));
                     state.motion = action.GetAnimation(layerType, true);
+                    if(!string.IsNullOrEmpty(action.timeParameter))
+                    {
+                        state.timeParameter = action.timeParameter;
+                        state.timeParameterActive = true;
+                        AddParameter(controller, action.timeParameter, AnimatorControllerParameterType.Float, 0);
+                    }
 
                     //Transition
                     action.AddTransitions(controller, lastState, state, action.fadeIn, Action.Trigger.Type.Enter, parentAction);
-
-                    //Animation Layer Weight
-                    var layerWeight = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAnimatorLayerControl>();
-                    layerWeight.goalWeight = 1;
-                    layerWeight.layer = layerIndex;
-                    layerWeight.blendDuration = 0;
-                    layerWeight.playable = VRC.SDKBase.VRC_AnimatorLayerControl.BlendableLayer.FX;
 
                     //Tracking
                     SetupTracking(action, state, TrackingType.Animation);
 
                     //Parameter Drivers
-                    BuildParameterDrivers(action, state);
+                    BuildParameterDrivers(action, state, true);
 
                     //Store
                     lastState = state;
@@ -1157,6 +1167,12 @@ namespace VRCAvatarActions
                 {
                     var state = layer.stateMachine.AddState(action.name + "_Hold", StatePosition(2, actionIter));
                     state.motion = action.GetAnimation(layerType, true);
+                    if(!string.IsNullOrEmpty(action.timeParameter))
+                    {
+                        state.timeParameter = action.timeParameter;
+                        state.timeParameterActive = true;
+                        AddParameter(controller, action.timeParameter, AnimatorControllerParameterType.Float, 0);
+                    }
 
                     //Transition
                     var transition = lastState.AddTransition(state);
@@ -1178,6 +1194,9 @@ namespace VRCAvatarActions
 
                         //Transition
                         action.AddTransitions(controller, lastState, state, 0, Action.Trigger.Type.Exit, parentAction);
+
+                        //Parameter Drivers
+                        BuildParameterDrivers(action, state, false);
 
                         //Store
                         lastState = state;
@@ -1394,7 +1413,7 @@ namespace VRCAvatarActions
             if (transition.conditions.Length == 0)
                 transition.AddCondition(AnimatorConditionMode.If, 1f, "True");
         }
-        protected static void BuildParameterDrivers(BaseActions.Action action, AnimatorState state)
+        protected static void BuildParameterDrivers(BaseActions.Action action, AnimatorState state, bool isEnter)
         {
             if (action.parameterDrivers.Count == 0)
                 return;
@@ -1406,51 +1425,81 @@ namespace VRCAvatarActions
                 if (string.IsNullOrEmpty(driver.name))
                     continue;
 
-                //Build param
-                var param = new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter();
-                if (driver.type == Action.ParameterDriver.Type.RawValue)
+                //Check for exit
+                if(isEnter)
                 {
-                    param.name = driver.name;
-                    param.value = driver.value;
-                    param.type = driver.changeType;
-                    param.valueMin = driver.valueMin;
-                    param.valueMax = driver.valueMax;
-                    param.chance = driver.chance;
-                }
-                else if(driver.type == Action.ParameterDriver.Type.MenuToggle)
-                {
-                    //Search for menu action
-                    var drivenAction = ActionsDescriptor.menuActions.FindMenuAction(driver.name);
-                    if(drivenAction == null || drivenAction.menuType != MenuActions.MenuAction.MenuType.Toggle)
-                    {
-                        BuildFailed = true;
-                        EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find menu toggle named '{driver.name}' for a parameter driver.  Build Failed.", "Okay");
-                        return;
-                    }
-                    param.name = drivenAction.parameter;
-                    param.value = driver.value == 0 ? 0 : drivenAction.controlValue;
-                }
-                else if(driver.type == Action.ParameterDriver.Type.MenuRandom)
-                {
-                    //Find max values    
-                    List<MenuActions.MenuAction> list;
-                    if(ParameterToMenuActions.TryGetValue(driver.name, out list))
+                    //Build param
+                    var param = new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter();
+                    if(driver.type == Action.ParameterDriver.Type.RawValue)
                     {
                         param.name = driver.name;
-                        param.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random;
-                        param.value = 0;
-                        param.valueMin = driver.isZeroValid ? 1 : 0;
-                        param.valueMax = list.Count;
-                        param.chance = 0.5f;
+                        param.value = driver.value;
+                        param.type = driver.changeType;
+                        param.valueMin = driver.valueMin;
+                        param.valueMax = driver.valueMax;
+                        param.chance = driver.chance;
                     }
-                    else
+                    else if(driver.type == Action.ParameterDriver.Type.MenuToggle)
                     {
-                        BuildFailed = true;
-                        EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find any menu actions driven by parameter '{driver.name} for a parameter driver'.  Build Failed.", "Okay");
-                        return;
+                        //Search for menu action
+                        var drivenAction = ActionsDescriptor.menuActions.FindMenuAction(driver.name);
+                        if(drivenAction == null || drivenAction.menuType != MenuActions.MenuAction.MenuType.Toggle)
+                        {
+                            BuildFailed = true;
+                            EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find menu toggle named '{driver.name}' for a parameter driver.  Build Failed.", "Okay");
+                            return;
+                        }
+                        param.name = drivenAction.parameter;
+                        param.value = driver.value == 0 ? 0 : drivenAction.controlValue;
+                    }
+                    else if(driver.type == Action.ParameterDriver.Type.MenuRandom)
+                    {
+                        //Find max values    
+                        List<MenuActions.MenuAction> list;
+                        if(ParameterToMenuActions.TryGetValue(driver.name, out list))
+                        {
+                            param.name = driver.name;
+                            param.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Random;
+                            param.value = 0;
+                            param.valueMin = driver.isZeroValid ? 1 : 0;
+                            param.valueMax = list.Count;
+                            param.chance = 0.5f;
+                        }
+                        else
+                        {
+                            BuildFailed = true;
+                            EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find any menu actions driven by parameter '{driver.name} for a parameter driver'.  Build Failed.", "Okay");
+                            return;
+                        }
+                    }
+                    driverBehaviour.parameters.Add(param);
+                }
+                else
+                {
+                    //Reset on exit
+                    if(driver.resetOnExit)
+                    {
+                        var param = new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter();
+                        param.name = driver.name;
+                        param.value = 0;
+                        param.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set;
+
+                        if(driver.type == Action.ParameterDriver.Type.MenuToggle)
+                        {
+                            var drivenAction = ActionsDescriptor.menuActions.FindMenuAction(driver.name);
+                            if(drivenAction == null || drivenAction.menuType != MenuActions.MenuAction.MenuType.Toggle)
+                            {
+                                BuildFailed = true;
+                                EditorUtility.DisplayDialog("Build Error", $"Action '{action.name}' unable to find menu toggle named '{driver.name}' for a parameter driver.  Build Failed.", "Okay");
+                                return;
+                            }
+                            param.name = drivenAction.parameter;
+                        }
+
+                        driverBehaviour.parameters.Add(param);
                     }
                 }
-                driverBehaviour.parameters.Add(param);
+
             }
         }
 
@@ -1488,20 +1537,32 @@ namespace VRCAvatarActions
             }
             return -1;
         }
-        protected static UnityEditor.Animations.AnimatorControllerLayer GetControllerLayer(UnityEditor.Animations.AnimatorController controller, string name)
+        protected static AnimatorControllerLayer GetControllerLayer(AnimatorController controller, string name)
         {
             //Check if exists
-            foreach (var layer in controller.layers)
+            foreach(var item in controller.layers)
             {
-                if (layer.name == name)
-                    return layer;
+                if (item.name == name)
+                    return item;
             }
 
             //Create
-            controller.AddLayer(name);
-            return controller.layers[controller.layers.Length - 1];
+            var layer = new AnimatorControllerLayer();
+            layer.name = name;
+            layer.defaultWeight = 1f;
+            layer.blendingMode = AnimatorLayerBlendingMode.Override;
+            layer.stateMachine = new AnimatorStateMachine();
+            layer.stateMachine.hideFlags = HideFlags.HideInHierarchy;
+            if(AssetDatabase.GetAssetPath(controller) != "")
+                AssetDatabase.AddObjectToAsset(layer.stateMachine, AssetDatabase.GetAssetPath(controller));
+            controller.AddLayer(layer);
+
+            return layer;
+
+            //controller.AddLayer(name);
+            //result = controller.layers[controller.layers.Length - 1];
         }
-        protected static AnimatorControllerParameter AddParameter(UnityEditor.Animations.AnimatorController controller, string name, AnimatorControllerParameterType type, float value)
+        protected static AnimatorControllerParameter AddParameter(AnimatorController controller, string name, AnimatorControllerParameterType type, float value)
         {
             //Clear
             for (int i = 0; i < controller.parameters.Length; i++)
@@ -1658,18 +1719,6 @@ namespace VRCAvatarActions
                     action.foldoutToggleObjects = EditorGUILayout.Foldout(action.foldoutToggleObjects, Title("Object Properties", action.objectProperties.Count > 0));
                     if (action.foldoutToggleObjects)
                     {
-                        /*var clip = (AnimationClip)EditorGUILayout.ObjectField("Clip", null, typeof(AnimationClip), false);
-                        if(clip != null)
-                        {
-                            var bindings = AnimationUtility.GetCurveBindings(clip);
-                            Debug.Log("Bindings");
-                            foreach(var binding in bindings)
-                            {
-                                Debug.Log("Name:" + binding.propertyName);
-                                Debug.Log("Path:" + binding.path);
-                            }
-                        }*/
-
                         //Add
                         EditorGUILayout.BeginHorizontal();
                         {
@@ -1713,6 +1762,7 @@ namespace VRCAvatarActions
                                 {
                                     switch (property.type)
                                     {
+                                        case ObjectProperty.Type.ToggleComponent: ComponentProperty(property); break;
                                         case ObjectProperty.Type.MaterialSwap: MaterialSwapProperty(property); break;
                                         case ObjectProperty.Type.BlendShape: BlendShapeProperty(new ObjectProperty.BlendShape(property)); break;
                                         case ObjectProperty.Type.PlayAudio: PlayAudioProperty(new ObjectProperty.PlayAudio(property)); break;
@@ -1754,6 +1804,10 @@ namespace VRCAvatarActions
                         property.Clear();
                 }
                 return false;
+            }
+            void ComponentProperty(ObjectProperty property)
+            {
+                Debug.LogError("TODO");
             }
             void MaterialSwapProperty(ObjectProperty property)
             {
@@ -1882,6 +1936,9 @@ namespace VRCAvatarActions
                         EditorGUILayout.HelpBox("Use for most everything else, including bones not part of the humanoid skeleton.", MessageType.Info);
                         EditorGUI.indentLevel -= 1;
                     }
+
+                    //Options
+                    action.timeParameter = EditorGUILayout.TextField("Time Parameter", action.timeParameter);
                 }
             }
             EditorGUI.indentLevel -= 1;
@@ -1943,6 +2000,7 @@ namespace VRCAvatarActions
                             parameter.name = DrawParameterDropDown(parameter.name, "Parameter");
                             parameter.isZeroValid = EditorGUILayout.Toggle("Is Zero Valid", parameter.isZeroValid);
                         }
+                        parameter.resetOnExit = EditorGUILayout.Toggle("Reset On Exit", parameter.resetOnExit);
                         EditorGUILayout.EndVertical();
                     }
 
@@ -2263,7 +2321,7 @@ namespace VRCAvatarActions
                 return null;
             return root.transform.Find(path)?.gameObject;
         }
-        string FindPropertyPath(GameObject obj)
+        public static string FindPropertyPath(GameObject obj)
         {
             string path = obj.name;
             while (true)
@@ -2276,6 +2334,17 @@ namespace VRCAvatarActions
                 path = $"{obj.name}/{path}";
             }
             return path;
+        }
+
+        public static void DrawObjectReference(GameObject root, string name, SerializedProperty property)
+        {
+            var obj = FindPropertyObject(root, property.stringValue);
+            EditorGUI.BeginChangeCheck();
+            obj = (GameObject)EditorGUILayout.ObjectField(name, obj, typeof(GameObject), true, null);
+            if(EditorGUI.EndChangeCheck())
+            {
+                property.stringValue = obj != null ? FindPropertyPath(obj) : "";
+            }
         }
 #endregion
     }
